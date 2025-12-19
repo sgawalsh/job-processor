@@ -1,5 +1,7 @@
 const express = require('express');
 const { Pool } = require('pg');
+const Redis = require('ioredis');
+const redis = new Redis(process.env.REDIS_URL);
 
 // Read database config from environment variables
 const pool = new Pool({
@@ -25,15 +27,27 @@ app.post('/jobs', async (req, res) => {
     return res.status(400).json({ error: 'description is required' });
   }
 
+  const client = await pool.connect();
+
   try {
-    const result = await pool.query(
+    await client.query('BEGIN');
+    const result = await client.query(
       'INSERT INTO jobs(description) VALUES($1) RETURNING id, description',
       [description]
     );
+
+    await client.query('COMMIT');
+    
+    const job = result.rows[0];
+    await redis.lpush('jobs:queue', job.id);
+
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error(err);
     res.status(500).json({ error: 'Database error' });
+  } finally {
+    client.release();
   }
 });
 

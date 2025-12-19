@@ -1,4 +1,3 @@
-// migrations/migrate.js
 const { Pool } = require('pg');
 
 // Use same env vars
@@ -13,11 +12,27 @@ const pool = new Pool({
 async function runMigrations() {
   try {
     await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'job_status') THEN
+          CREATE TYPE job_status AS ENUM (
+            'PENDING',
+            'RUNNING',
+            'SUCCEEDED',
+            'FAILED'
+          );
+        END IF;
+      END$$;
+    `);
+
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS jobs (
         id SERIAL PRIMARY KEY,
         description TEXT NOT NULL,
-        status INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT NOW()
+        status job_status NOT NULL DEFAULT 'PENDING',
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        attempts INT DEFAULT 0
       )
     `);
     console.log('Migrations complete');
