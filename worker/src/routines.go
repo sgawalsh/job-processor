@@ -14,14 +14,14 @@ import (
 type Worker struct {
 	redisClient *redis.Client
 	db          *sql.DB
-	quit        chan bool
 }
 
 const (
-	StatusPending    = 0
-	StatusProcessing = 1
-	StatusCompleted  = 2
-	StatusFailed     = 3
+	StatusPending   = "PENDING"
+	StatusQueued    = "QUEUED"
+	StatusRunning   = "RUNNING"
+	StatusSucceeded = "SUCCEEDED"
+	StatusFailed    = "FAILED"
 )
 
 func connectPostgres() (*sql.DB, error) {
@@ -75,24 +75,27 @@ func NewWorker() (*Worker, error) {
 	return &Worker{
 		redisClient: rdb,
 		db:          db,
-		quit:        make(chan bool),
 	}, nil
 }
 
 // Run starts consuming jobs from Redis
-func (w *Worker) Run() {
-	ctx := context.Background()
+func (w *Worker) executeQueuedJobs(ctx context.Context) {
 	log.Println("Worker is running...")
 
 	for {
 		select {
-		case <-w.quit:
+		case <-ctx.Done():
 			log.Println("Received stop signal")
 			return
 		default:
 			// Wait for job ID from Redis queue
-			result, err := w.redisClient.BLPop(ctx, 0*time.Second, "jobs:queue").Result()
+			result, err := w.redisClient.BLPop(ctx, 5*time.Second, "jobs:queue").Result()
 			if err != nil {
+				if err == redis.Nil {
+					//log.Printf("No jobs found")
+					// Queue was empty, nothing to process, no log needed
+					continue
+				}
 				log.Printf("Error fetching job: %v", err)
 				time.Sleep(1 * time.Second)
 				continue
@@ -109,21 +112,27 @@ func (w *Worker) Run() {
 				continue
 			}
 
-			log.Printf("Job %s: %s (current status: %s)", jobID, description, status)
+			log.Printf("Found job %s: %s (current status: %s)", jobID, description, status)
 
-			_, err = w.db.ExecContext(
+			res, err := w.db.ExecContext(
 				ctx,
 				"UPDATE jobs SET status=$1 WHERE id=$2 AND status=$3",
-				StatusProcessing,
+				StatusRunning,
 				jobID,
-				StatusPending,
+				StatusQueued,
 			)
+
+			rows, _ := res.RowsAffected()
+			if rows == 0 {
+				log.Printf("Job %s already claimed or not in queued state", jobID)
+				continue
+			}
 
 			// Simulate work
 			time.Sleep(2 * time.Second)
 
 			// Update job status to "completed"
-			_, err = w.db.ExecContext(ctx, "UPDATE jobs SET status=$1 WHERE id=$2", StatusCompleted, jobID)
+			_, err = w.db.ExecContext(ctx, "UPDATE jobs SET status=$1 WHERE id=$2", StatusSucceeded, jobID)
 			if err != nil {
 				log.Printf("Error updating job status: %v", err)
 				continue
@@ -134,7 +143,65 @@ func (w *Worker) Run() {
 	}
 }
 
-// Stop signals the worker to stop
-func (w *Worker) Stop() {
-	close(w.quit)
+func (w *Worker) pollPendingJobs(ctx context.Context) {
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("Poller stopping...")
+			return
+		case <-ticker.C:
+			tx, err := w.db.BeginTx(ctx, nil)
+			if err != nil {
+				log.Printf("Poller: failed to begin tx: %v", err)
+				continue
+			}
+
+			// UPDATE and get IDs atomically
+			rows, err := tx.QueryContext(ctx, `
+				UPDATE jobs
+				SET status = $1
+				WHERE id IN (
+					SELECT id
+					FROM jobs
+					WHERE status = $2
+					ORDER BY id
+					FOR UPDATE SKIP LOCKED
+					LIMIT 10
+				)
+				RETURNING id
+			`, StatusQueued, StatusPending)
+			if err != nil {
+				tx.Rollback()
+				log.Printf("Poller: update error: %v", err)
+				continue
+			}
+
+			var jobIDs []int
+			for rows.Next() {
+				var id int
+				if err := rows.Scan(&id); err == nil {
+					jobIDs = append(jobIDs, id)
+				}
+			}
+			rows.Close()
+
+			if err := tx.Commit(); err != nil {
+				log.Printf("Poller: commit failed: %v", err)
+				continue
+			}
+
+			// Enqueue committed jobs to Redis
+			for _, id := range jobIDs {
+				if err := w.redisClient.RPush(ctx, "jobs:queue", id).Err(); err != nil {
+					log.Printf("Poller: failed to enqueue job %d: %v", id, err)
+				}
+			}
+			if len(jobIDs) > 0 {
+				log.Printf("Poller: enqueued %d jobs", len(jobIDs))
+			}
+		}
+	}
 }

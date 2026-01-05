@@ -1,35 +1,64 @@
 package main
 
 import (
-    "log"
-    "os"
-    "os/signal"
-    "syscall"
+	"context"
+	"log"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"time"
 )
 
 func main() {
-    log.Println("Worker starting...")
+	log.Println("Worker starting...")
 
-    // Create a new worker
-    w, err := NewWorker()
-    if err != nil {
-        log.Fatalf("Failed to initialize worker: %v", err)
-    }
+	// Create a new worker
+	w, err := NewWorker()
+	if err != nil {
+		log.Fatalf("Failed to initialize worker: %v", err)
+	}
 
-    // Run worker in a separate goroutine
-    done := make(chan bool)
-    go func() {
-        w.Run()
-        done <- true
-    }()
+	// Root cancellable context
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-    // Wait for SIGINT or SIGTERM to gracefully shut down
-    sigs := make(chan os.Signal, 1)
-    signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	var wg sync.WaitGroup
 
-    <-sigs
-    log.Println("Shutting down worker...")
-    w.Stop()
-    <-done
-    log.Println("Worker stopped.")
+	//Start poller
+	wg.Go(func() {
+		w.pollPendingJobs(ctx)
+	})
+
+	//Start Redis consumer
+	wg.Go(func() {
+		w.executeQueuedJobs(ctx)
+	})
+
+	// Handle shutdown signals
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	<-sigs
+	log.Println("Shutdown signal received")
+
+	cancel()
+
+	// Forced shutdown after timeout
+	const maxShutdown = 10 * time.Second
+	done := make(chan struct{})
+
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		log.Println("All workers shut down cleanly")
+	case <-time.After(maxShutdown):
+		log.Println("Shutdown timed out, forcing exit")
+	}
+
+	log.Println("Worker stopped")
 }
