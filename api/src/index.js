@@ -1,7 +1,5 @@
 const express = require('express');
 const { Pool } = require('pg');
-const Redis = require('ioredis');
-const redis = new Redis(process.env.REDIS_URL);
 
 // Read database config from environment variables
 const pool = new Pool({
@@ -37,10 +35,6 @@ app.post('/jobs', async (req, res) => {
     );
 
     await client.query('COMMIT');
-    
-    const job = result.rows[0];
-    await redis.lpush('jobs:queue', job.id);
-
     res.status(201).json(result.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');
