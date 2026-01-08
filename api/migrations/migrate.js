@@ -50,7 +50,10 @@ async function runMigrations() {
         status job_status NOT NULL DEFAULT 'PENDING',
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW(),
-        attempts INT DEFAULT 0
+        enqueued_at TIMESTAMP,
+        started_at TIMESTAMP,
+        attempts INT DEFAULT 0,
+        last_error TEXT
       )
     `);
     // Create pg_cron extension

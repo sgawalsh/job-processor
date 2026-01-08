@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"slices"
+	"strconv"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -92,7 +94,6 @@ func (w *Worker) executeQueuedJobs(ctx context.Context) {
 			result, err := w.redisClient.BLPop(ctx, 5*time.Second, "jobs:queue").Result()
 			if err != nil {
 				if err == redis.Nil {
-					//log.Printf("No jobs found")
 					// Queue was empty, nothing to process, no log needed
 					continue
 				}
@@ -101,8 +102,12 @@ func (w *Worker) executeQueuedJobs(ctx context.Context) {
 				continue
 			}
 
-			jobID := result[1]
-			log.Printf("Processing job: %s", jobID)
+			jobIDStr := result[1]
+			jobID, err := strconv.Atoi(jobIDStr)
+			if err != nil {
+				log.Printf("Invalid jobID in queue: %q", jobIDStr)
+				continue // poison message, skip
+			}
 
 			// Fetch job from Postgres
 			var description, status string
@@ -112,33 +117,30 @@ func (w *Worker) executeQueuedJobs(ctx context.Context) {
 				continue
 			}
 
-			log.Printf("Found job %s: %s (current status: %s)", jobID, description, status)
+			log.Printf("Found job %d: %s (current status: %s)", jobID, description, status)
 
-			res, err := w.db.ExecContext(
-				ctx,
-				"UPDATE jobs SET status=$1 WHERE id=$2 AND status=$3",
-				StatusRunning,
-				jobID,
-				StatusQueued,
-			)
-
-			rows, _ := res.RowsAffected()
-			if rows == 0 {
-				log.Printf("Job %s already claimed or not in queued state", jobID)
+			err = w.claimJob(ctx, jobID)
+			if err != nil {
+				log.Printf("Error claiming job %d: %v", jobID, err)
 				continue
 			}
 
-			// Simulate work
-			time.Sleep(2 * time.Second)
+			log.Printf("Processing job: %d", jobID)
+
+			err = doWork()
+			if err != nil {
+				w.handleJobFailure(ctx, jobID, err)
+				continue
+			}
 
 			// Update job status to "completed"
-			_, err = w.db.ExecContext(ctx, "UPDATE jobs SET status=$1 WHERE id=$2", StatusSucceeded, jobID)
+			_, err = w.db.ExecContext(ctx, "UPDATE jobs SET status=$1 WHERE id=$2 and status=$3", StatusSucceeded, jobID, StatusRunning)
 			if err != nil {
-				log.Printf("Error updating job status: %v", err)
+				log.Printf("Error updating job %d to completed status: %v", jobID, err)
 				continue
 			}
 
-			log.Printf("Job %s marked as completed", jobID)
+			log.Printf("Job %d marked as completed", jobID)
 		}
 	}
 }
@@ -159,39 +161,36 @@ func (w *Worker) pollPendingJobs(ctx context.Context) {
 				continue
 			}
 
-			// UPDATE and get IDs atomically
-			rows, err := tx.QueryContext(ctx, `
-				UPDATE jobs
-				SET status = $1
-				WHERE id IN (
-					SELECT id
-					FROM jobs
-					WHERE status = $2
-					ORDER BY id
-					FOR UPDATE SKIP LOCKED
-					LIMIT 10
-				)
-				RETURNING id
-			`, StatusQueued, StatusPending)
+			// Queue jobs in QUEUED state in order to recover any lost jobs due to crashes, idempotent worker prevents double processing
+			jobIDs, err := queueQueuedJobs(ctx, tx)
 			if err != nil {
+				log.Printf("Poller: failed to enqueue queued jobs: %v", err)
 				tx.Rollback()
-				log.Printf("Poller: update error: %v", err)
 				continue
 			}
 
-			var jobIDs []int
-			for rows.Next() {
-				var id int
-				if err := rows.Scan(&id); err == nil {
-					jobIDs = append(jobIDs, id)
-				}
+			// Set PENDING jobs to QUEUED in DB and get their IDs
+			pendingJobIDs, err := queuePendingJobs(ctx, tx)
+			if err != nil {
+				log.Printf("Poller: failed to enqueue pending jobs: %v", err)
+				tx.Rollback()
+				continue
 			}
-			rows.Close()
+
+			// Requeue stuck RUNNING jobs
+			stuckJobIDs, err := requeueStuckRunningJobs(ctx, tx)
+			if err != nil {
+				log.Printf("Poller: failed to requeue stuck running jobs: %v", err)
+				tx.Rollback()
+				continue
+			}
 
 			if err := tx.Commit(); err != nil {
 				log.Printf("Poller: commit failed: %v", err)
 				continue
 			}
+
+			jobIDs = slices.Concat(jobIDs, pendingJobIDs, stuckJobIDs)
 
 			// Enqueue committed jobs to Redis
 			for _, id := range jobIDs {
@@ -202,6 +201,13 @@ func (w *Worker) pollPendingJobs(ctx context.Context) {
 			if len(jobIDs) > 0 {
 				log.Printf("Poller: enqueued %d jobs", len(jobIDs))
 			}
+
 		}
 	}
+}
+
+func doWork() error {
+	// Simulate work
+	time.Sleep(2 * time.Second)
+	return nil
 }
