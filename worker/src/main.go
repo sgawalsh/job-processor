@@ -3,15 +3,30 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+)
+
+var (
+	jobsProcessed = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "worker_jobs_processed_total",
+			Help: "Total jobs processed",
+		},
+	)
 )
 
 func main() {
 	log.Println("Worker starting...")
+
+	prometheus.MustRegister(jobsProcessed)
 
 	// Create a new worker
 	w, err := NewWorker()
@@ -24,6 +39,11 @@ func main() {
 	defer cancel()
 
 	var wg sync.WaitGroup
+
+	wg.Go(func() {
+		http.Handle("/metrics", promhttp.Handler())
+		http.ListenAndServe(":2112", nil)
+	})
 
 	//Start poller
 	wg.Go(func() {

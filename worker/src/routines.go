@@ -139,7 +139,7 @@ func (w *Worker) executeQueuedJobs(ctx context.Context) {
 				log.Printf("Error updating job %d to completed status: %v", jobID, err)
 				continue
 			}
-
+			jobsProcessed.Inc()
 			log.Printf("Job %d marked as completed", jobID)
 		}
 	}
