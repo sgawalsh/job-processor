@@ -119,7 +119,7 @@ func (w *Worker) handleJobFailure(ctx context.Context, jobID int, err error) {
         WHERE id = $1
 		AND status = $6
         RETURNING attempts
-    `, jobID, err.Error(), maxAttempts, StatusFailed, StatusQueued, StatusRunning).Scan(&attempts)
+    `, jobID, err.Error(), maxAttempts, StatusFailed, StatusPending, StatusRunning).Scan(&attempts)
 
 	if err2 != nil {
 		log.Printf("Failed to update retry state for job %d: %v", jobID, err2)

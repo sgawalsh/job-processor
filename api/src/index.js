@@ -75,7 +75,7 @@ app.get('/', (req, res) => {
 app.post('/jobs', async (req, res) => {
   const { description } = req.body;
   if (!description) {
-    return res.status(400).json({ error: 'description is required' });
+    return res.status(400).json({ error: 'Description is required' });
   }
 
   const client = await pool.connect();
@@ -96,6 +96,30 @@ app.post('/jobs', async (req, res) => {
     res.status(500).json({ error: 'Database error' });
   } finally {
     client.release();
+  }
+});
+
+// Get job status
+app.get('/jobs/:id', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const { id } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT id, description, status, created_at, enqueued_at, started_at, attempts, last_error
+       FROM jobs
+       WHERE id = $1`,
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
   }
 });
 
