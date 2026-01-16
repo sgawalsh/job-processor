@@ -19,8 +19,8 @@ services:
 
   api:
     build: ./api
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     depends_on:
       - db
     env_file:
@@ -71,6 +71,21 @@ services:
       DATA_SOURCE_NAME: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable"
     depends_on:
       - db
+  
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - api
+
+  nginx:
+    build:
+      context: ./infra/nginx
+    ports:
+      - "8080:80"
+    depends_on:
+      - frontend
+      - api
 
 volumes:
   pgdata:

@@ -1,0 +1,9 @@
+services:
+  frontend:
+    build:
+      dockerfile: Dockerfile.dev
+
+  nginx:
+    build:
+      args:
+        ENV: dev

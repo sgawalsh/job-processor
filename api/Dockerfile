@@ -13,7 +13,4 @@ RUN npm install --production
 COPY src/ .
 COPY migrations/ /src/migrations/
 
-# Expose the port
-EXPOSE 8080
-
 CMD ["node", "index.js"]

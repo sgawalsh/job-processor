@@ -1,0 +1,20 @@
+# # build stage v25.3
+# FROM node@sha256:a2f09f3ab9217c692a4e192ea272866ae43b59fabda1209101502bf40e0b9768 AS builder
+# WORKDIR /app
+# COPY src/package*.json ./
+# RUN npm install
+# COPY src .
+# RUN npm run build
+
+# # runtime
+# #stable-alpine v3.23
+# FROM nginx@sha256:67cbbcc757a6ce913b33e515b020cfd3923897ad883c452903b1e3487a95a570
+# COPY --from=builder /app/dist /usr/share/nginx/html
+# COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
+
+#stable-alpine v3.23
+FROM nginx@sha256:67cbbcc757a6ce913b33e515b020cfd3923897ad883c452903b1e3487a95a570
+
+ARG ENV=dev
+
+COPY nginx.${ENV}.conf /etc/nginx/conf.d/default.conf
