@@ -45,15 +45,20 @@ func main() {
 		http.ListenAndServe(":2112", nil)
 	})
 
-	//Start poller
-	wg.Go(func() {
-		w.pollPendingJobs(ctx)
-	})
+	role := os.Getenv("ROLE")
 
-	//Start Redis consumer
-	wg.Go(func() {
-		w.executeQueuedJobs(ctx)
-	})
+	switch role {
+	case "poller": // Start poller
+		wg.Go(func() {
+			w.pollPendingJobs(ctx)
+		})
+	case "worker": // Start Redis consumer
+		wg.Go(func() {
+			w.executeQueuedJobs(ctx)
+		})
+	default:
+		log.Fatal("ROLE must be poller or worker")
+	}
 
 	// Handle shutdown signals
 	sigs := make(chan os.Signal, 1)
