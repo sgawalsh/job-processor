@@ -27,6 +27,9 @@ services:
   redis:
     image: redis@sha256:73dad4271642c5966db88db7a7585fae7cf10b685d1e48006f31e0294c29fdd7 # v8.4.0
     restart: unless-stopped
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
 
   poller:
     build: ./worker
@@ -72,7 +75,8 @@ services:
   redis-exporter:
     image: oliver006/redis_exporter@sha256:bac9872da2b48e6eebbffb11517a5dcda59958eda51e1e4231eeb5dd516b4a5f # v1.80.1
     environment:
-      - REDIS_ADDR=redis:6379
+      - REDIS_ADDR=redis:${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter@sha256:fb96c4413985d4b23ab02b19022b3d70a86c8e0a62f41ab15ebb6f4673781a5d # v0.18.1
