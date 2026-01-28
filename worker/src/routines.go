@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"slices"
 	"strconv"
 	"time"
@@ -27,8 +28,20 @@ const (
 )
 
 func connectPostgres() (*sql.DB, error) {
+	// read environment variables
+	host := os.Getenv("POSTGRES_HOST")
+	port := os.Getenv("POSTGRES_PORT")
+	user := os.Getenv("POSTGRES_USER")
+	password := os.Getenv("POSTGRES_PASSWORD")
+	dbname := os.Getenv("POSTGRES_DB")
+
+	connStr := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		user, password, host, port, dbname,
+	)
+
 	for i := 1; i <= 10; i++ {
-		db, err := sql.Open("pgx", "postgres://app:app@db:5432/jobs?sslmode=disable")
+		db, err := sql.Open("pgx", connStr)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		err = db.PingContext(ctx)

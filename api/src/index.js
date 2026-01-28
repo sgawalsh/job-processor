@@ -4,11 +4,11 @@ const clientProm = require('prom-client');
 
 // Read database config from environment variables
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  host: process.env.POSTGRES_HOST,
+  port: process.env.POSTGRES_PORT,
+  database: process.env.POSTGRES_DB,
+  user: process.env.POSTGRES_USER,
+  password: process.env.POSTGRES_PASSWORD,
 });
 
 const app = express();
@@ -67,12 +67,12 @@ app.get('/metrics', async (req, res) => {
 // -----------------------------
 
 // Health check
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
   res.send('API is running');
 });
 
 // Endpoint to create a job
-app.post('/jobs', async (req, res) => {
+app.post('/api/jobs', async (req, res) => {
   const { description } = req.body;
   if (!description) {
     return res.status(400).json({ error: 'Description is required' });
@@ -100,7 +100,7 @@ app.post('/jobs', async (req, res) => {
 });
 
 // Get job status
-app.get('/jobs/:id', async (req, res) => {
+app.get('/api/jobs/:id', async (req, res) => {
   res.set('Cache-Control', 'no-store');
   const { id } = req.params;
 
@@ -124,7 +124,7 @@ app.get('/jobs/:id', async (req, res) => {
 });
 
 // Start server
-const port = process.env.PORT || 8080;
+const port = process.env.API_PORT || 8080;
 app.listen(port, () => {
   console.log(`API running on port ${port}`);
 });

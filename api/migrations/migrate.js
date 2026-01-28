@@ -2,11 +2,11 @@ const { Pool } = require('pg');
 
 // Use same env vars
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  host: process.env.POSTGRES_HOST,
+  port: process.env.POSTGRES_PORT,
+  database: process.env.POSTGRES_DB,
+  user: process.env.POSTGRES_USER,
+  password: process.env.POSTGRES_PASSWORD,
 });
 
 async function waitForDB() {
@@ -26,7 +26,7 @@ async function waitForDB() {
 
 async function runMigrations() {
   try {
-    waitForDB();
+    await waitForDB();
     // Create enum type for job status
     await pool.query(`
       DO $$

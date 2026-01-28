@@ -1,11 +1,9 @@
 services:
-  db:
-    build: ./db
+  postgres:
+    build: ./postgres
     restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+    env_file:
+      - .env
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -13,7 +11,7 @@ services:
     build: ./api
     command: node migrations/migrate.js
     depends_on:
-      - db
+      - postgres
     env_file:
       - .env
 
@@ -22,7 +20,7 @@ services:
     expose:
       - "8080"
     depends_on:
-      - db
+      - postgres
     env_file:
       - .env
 
@@ -33,7 +31,7 @@ services:
   poller:
     build: ./worker
     depends_on:
-      - db
+      - postgres
       - migrate
       - redis
     env_file:
@@ -44,7 +42,7 @@ services:
   worker:
     build: ./worker
     depends_on:
-      - db
+      - postgres
       - migrate
       - redis
     env_file:
@@ -63,7 +61,7 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
-      - db
+      - postgres
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
@@ -79,9 +77,9 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter@sha256:fb96c4413985d4b23ab02b19022b3d70a86c8e0a62f41ab15ebb6f4673781a5d # v0.18.1
     environment:
-      DATA_SOURCE_NAME: "postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
     depends_on:
-      - db
+      - postgres
   
   frontend:
     build:
