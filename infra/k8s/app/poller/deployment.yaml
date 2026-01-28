@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: poller
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: poller
+  template:
+    metadata:
+      labels:
+        app: poller
+    spec:
+      containers:
+        - name: poller
+          image: sgawalsh/worker:0.1.0
+          env:
+            - name: ROLE
+              value: poller
+          envFrom:
+            - configMapRef:
+                name: postgres-config
+            - configMapRef:
+                name: redis-config
+            - secretRef:
+                name: postgres-secrets
+            - secretRef:
+                name: redis-secret

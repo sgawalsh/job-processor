@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-migrate
+  namespace: app
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: sgawalsh/api:0.1.0
+          command: ["node", "migrations/migrate.js"]
+          envFrom:
+            - configMapRef:
+                name: api-config
+            - configMapRef:
+                name: postgres-config
+            - secretRef:
+                name: postgres-secrets
