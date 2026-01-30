@@ -26,8 +26,6 @@ var (
 func main() {
 	log.Println("Worker starting...")
 
-	prometheus.MustRegister(jobsProcessed)
-
 	// Create a new worker
 	w, err := NewWorker()
 	if err != nil {
@@ -53,6 +51,7 @@ func main() {
 			w.pollPendingJobs(ctx)
 		})
 	case "worker": // Start Redis consumer
+		prometheus.MustRegister(jobsProcessed)
 		wg.Go(func() {
 			w.executeQueuedJobs(ctx)
 		})
