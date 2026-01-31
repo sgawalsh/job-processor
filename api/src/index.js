@@ -48,7 +48,10 @@ const httpRequestDuration = new clientProm.Histogram({
 app.use((req, res, next) => {
   const end = httpRequestDuration.startTimer({ method: req.method });
   res.on('finish', () => {
-    const route = req.route?.path || req.path || 'unknown';
+    let route = 'unknown';
+    if (req.route && req.route.path) {
+      route = req.baseUrl ? `${req.baseUrl}${req.route.path}` : req.route.path;
+    }
     const status = res.statusCode;
     httpRequestsTotal.inc({ method: req.method, route, status });
     end({ method: req.method, route, status });
