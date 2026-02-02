@@ -5,3 +5,4 @@ metadata:
   namespace: app
 data:
   REDIS_PORT: "6379"
+  REDIS_ADDR: "redis://redis:6379"

@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-exporter
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-exporter
+  template:
+    metadata:
+      labels:
+        app: redis-exporter
+    spec:
+      containers:
+        - name: redis-exporter
+          image: oliver006/redis_exporter:v1.63.0
+          ports:
+            - name: metrics
+              containerPort: 9121
+          envFrom:
+            - secretRef:
+                name: redis-secret
+            - configMapRef:
+                name: redis-config

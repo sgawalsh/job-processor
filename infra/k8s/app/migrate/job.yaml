@@ -18,4 +18,4 @@ spec:
             - configMapRef:
                 name: postgres-config
             - secretRef:
-                name: postgres-secrets
+                name: postgres-secret

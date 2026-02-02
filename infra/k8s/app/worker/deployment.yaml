@@ -16,6 +16,9 @@ spec:
       containers:
         - name: worker
           image: sgawalsh/worker:0.1.0
+          ports:
+            - name: metrics
+              containerPort: 2112
           env:
             - name: ROLE
               value: worker
@@ -25,6 +28,6 @@ spec:
             - configMapRef:
                 name: redis-config
             - secretRef:
-                name: postgres-secrets
+                name: postgres-secret
             - secretRef:
                 name: redis-secret
