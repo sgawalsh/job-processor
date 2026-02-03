@@ -69,7 +69,7 @@ func requeueStuckRunningJobs(ctx context.Context, tx *sql.Tx) ([]int, error) {
 			SELECT id
 			FROM jobs
 			WHERE status=$2
-			AND started_at < NOW() - INTERVAL '1 hour'
+			AND started_at < NOW() - INTERVAL '10 minutes'
 			ORDER BY id
 			FOR UPDATE SKIP LOCKED
 			LIMIT 10
