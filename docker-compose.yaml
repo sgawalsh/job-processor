@@ -23,13 +23,12 @@ services:
       - postgres
     env_file:
       - .env
-
-  redis:
-    image: redis@sha256:73dad4271642c5966db88db7a7585fae7cf10b685d1e48006f31e0294c29fdd7 # v8.4.0
-    restart: unless-stopped
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+        
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - api
 
   poller:
     build: ./worker
@@ -53,6 +52,35 @@ services:
     environment:
       ROLE: worker
 
+  nginx:
+    build:
+      context: ./infra/nginx
+    ports:
+      - "8080:80"
+    depends_on:
+      - frontend
+      - api
+      
+  redis:
+    image: redis@sha256:73dad4271642c5966db88db7a7585fae7cf10b685d1e48006f31e0294c29fdd7 # v8.4.0
+    restart: unless-stopped
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+
+  redis-exporter:
+    image: oliver006/redis_exporter@sha256:bac9872da2b48e6eebbffb11517a5dcda59958eda51e1e4231eeb5dd516b4a5f # v1.80.1
+    environment:
+      - REDIS_ADDR=redis:${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter@sha256:fb96c4413985d4b23ab02b19022b3d70a86c8e0a62f41ab15ebb6f4673781a5d # v0.18.1
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
+    depends_on:
+      - postgres
+
   prometheus:
     image: prom/prometheus@sha256:1f0f50f06acaceb0f5670d2c8a658a599affe7b0d8e78b898c1035653849a702 # v3.9.1
     volumes:
@@ -71,34 +99,6 @@ services:
       GF_LOG_FILTERS: dashboard-service:warn
     volumes:
     - grafana-data:/var/lib/grafana
-
-  redis-exporter:
-    image: oliver006/redis_exporter@sha256:bac9872da2b48e6eebbffb11517a5dcda59958eda51e1e4231eeb5dd516b4a5f # v1.80.1
-    environment:
-      - REDIS_ADDR=redis:${REDIS_PORT}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-
-  postgres-exporter:
-    image: prometheuscommunity/postgres-exporter@sha256:fb96c4413985d4b23ab02b19022b3d70a86c8e0a62f41ab15ebb6f4673781a5d # v0.18.1
-    environment:
-      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
-    depends_on:
-      - postgres
-  
-  frontend:
-    build:
-      context: ./frontend
-    depends_on:
-      - api
-
-  nginx:
-    build:
-      context: ./infra/nginx
-    ports:
-      - "8080:80"
-    depends_on:
-      - frontend
-      - api
 
 volumes:
   pgdata:
