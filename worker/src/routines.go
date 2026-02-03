@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 	"slices"
 	"strconv"
 	"time"
@@ -18,9 +19,17 @@ const (
 	StatusFailed    = "FAILED"
 )
 
+var pollingInterval = os.Getenv("worker_poll_interval")
+var workerTimeoutInterval = os.Getenv("worker_execution_timeout_interval")
+
 // Run starts consuming jobs from Redis
 func (w *Worker) executeQueuedJobs(ctx context.Context) {
 	log.Println("Worker is running...")
+
+	interval, err := strconv.Atoi(workerTimeoutInterval)
+	if err != nil {
+		log.Fatalf("Failed to parse worker_execution_timeout_interval: %v", err)
+	}
 
 	for {
 		select {
@@ -28,8 +37,9 @@ func (w *Worker) executeQueuedJobs(ctx context.Context) {
 			log.Println("Received stop signal")
 			return
 		default:
+			
 			// Wait for job ID from Redis queue
-			result, err := w.redisClient.BLPop(ctx, 5*time.Second, "jobs:queue").Result()
+			result, err := w.redisClient.BLPop(ctx, time.Duration(interval)*time.Second, "jobs:queue").Result()
 			if err != nil {
 				if err == redis.Nil {
 					// Queue was empty, nothing to process, no log needed
@@ -86,7 +96,12 @@ func (w *Worker) executeQueuedJobs(ctx context.Context) {
 }
 
 func (w *Worker) pollPendingJobs(ctx context.Context) {
-	ticker := time.NewTicker(2 * time.Second)
+	interval, err := strconv.Atoi(pollingInterval)
+	if err != nil {
+		log.Printf("Failed to parse worker_poll_interval: %v", err)
+		return
+	}
+	ticker := time.NewTicker(time.Duration(interval) * time.Second)
 	defer ticker.Stop()
 
 	for {

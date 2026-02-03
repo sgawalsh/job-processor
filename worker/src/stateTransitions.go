@@ -4,9 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"os"
 )
 
 const maxAttempts = 3
+
+var runningTimeout = os.Getenv("worker_running_timeout")
+var queuedTimeout = os.Getenv("worker_queued_timeout")
 
 // Queue jobs in QUEUED state in order to recover any lost jobs due to crashes, idempotent worker prevents double processing
 func queueQueuedJobs(ctx context.Context, tx *sql.Tx) ([]int, error) {
@@ -17,13 +21,13 @@ func queueQueuedJobs(ctx context.Context, tx *sql.Tx) ([]int, error) {
 			SELECT id
 			FROM jobs
 			WHERE status = $1
-			AND (enqueued_at IS NULL OR enqueued_at < NOW() - INTERVAL '5 minutes')
+			AND (enqueued_at IS NULL OR enqueued_at < NOW() - ($2)::interval)
 			ORDER BY id
 			FOR UPDATE SKIP LOCKED
 			LIMIT 1
 		)
 		RETURNING id;
-	`, StatusQueued)
+	`, StatusQueued, queuedTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -69,18 +73,26 @@ func requeueStuckRunningJobs(ctx context.Context, tx *sql.Tx) ([]int, error) {
 			SELECT id
 			FROM jobs
 			WHERE status=$2
-			AND started_at < NOW() - INTERVAL '10 minutes'
+			AND started_at < NOW() - ($3)::interval
 			ORDER BY id
 			FOR UPDATE SKIP LOCKED
 			LIMIT 10
 		)
 		RETURNING id
-	`, StatusQueued, StatusRunning)
+	`, StatusQueued, StatusRunning, runningTimeout)
 	if err != nil {
 		return nil, err
 	}
 
-	var jobIDs = rowsToIDs(rows)
+	defer rows.Close()
+
+	var jobIDs []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err == nil {
+			jobIDs = append(jobIDs, id)
+		}
+	}
 
 	return jobIDs, nil
 }

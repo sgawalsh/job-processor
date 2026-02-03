@@ -56,30 +56,31 @@ async function runMigrations() {
         last_error TEXT
       )
     `);
-    // Create pg_cron extension
-    await pool.query(`CREATE EXTENSION IF NOT EXISTS pg_cron;`);
+    if (process.env.cron_enabled === 'true') {
+      // Ensure pg_cron extension exists
+      await pool.query(`CREATE EXTENSION IF NOT EXISTS pg_cron;`);
 
-    await pool.query(`
-      DO $$
-      BEGIN
-        -- Remove existing job if present
-        PERFORM cron.unschedule(jobid)
+      const jobName = 'cleanup_jobs';
+      const schedule = process.env.cron_schedule || '0 * * * *';
+      const retention = process.env.cron_job_retention || '1 day';
+      const sqlCommand = `
+        DELETE FROM jobs
+        WHERE status = 'SUCCEEDED'
+          AND created_at < NOW() - INTERVAL '${retention}';
+      `;
+
+      // Unschedule existing job (if any)
+      await pool.query(`
+        SELECT cron.unschedule(jobid)
         FROM cron.job
-        WHERE jobname = 'cleanup_jobs';
+        WHERE jobname = $1;
+      `, [jobName]);
 
-        -- (Re)create job
-        PERFORM cron.schedule(
-          'cleanup_jobs',
-          '0 * * * *',
-          $exec$
-            DELETE FROM jobs
-            WHERE status = 'SUCCEEDED'
-              AND created_at < NOW() - INTERVAL '1 day';
-          $exec$
-        );
-      END
-      $$;
-    `);
+      // Schedule new job
+      await pool.query(`
+        SELECT cron.schedule($1, $2, $3);
+      `, [jobName, schedule, sqlCommand]);
+    }
 
     console.log('Migrations complete');
     process.exit(0);
