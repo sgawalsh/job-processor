@@ -23,6 +23,15 @@ var (
 	)
 )
 
+var (
+	jobsFailed = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "worker_jobs_failed_total",
+			Help: "Total jobs failed",
+		},
+	)
+)
+
 func main() {
 	log.Println("Worker starting...")
 
@@ -50,6 +59,7 @@ func main() {
 		})
 	case "worker": // Start Redis consumer
 		prometheus.MustRegister(jobsProcessed)
+		prometheus.MustRegister(jobsFailed)
 		wg.Go(func() {
 			w.executeQueuedJobs(ctx)
 		})

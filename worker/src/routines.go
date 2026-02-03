@@ -68,6 +68,8 @@ func (w *Worker) executeQueuedJobs(ctx context.Context) {
 			err = doWork()
 			if err != nil {
 				w.handleJobFailure(ctx, jobID, err)
+				jobsFailed.Inc()
+				log.Printf("Job %d failed: %v", jobID, err)
 				continue
 			}
 
