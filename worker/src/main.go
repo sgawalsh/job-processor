@@ -43,9 +43,7 @@ func main() {
 		http.ListenAndServe(":2112", nil)
 	})
 
-	role := os.Getenv("ROLE")
-
-	switch role {
+	switch os.Getenv("ROLE") {
 	case "poller": // Start poller
 		wg.Go(func() {
 			w.pollPendingJobs(ctx)
