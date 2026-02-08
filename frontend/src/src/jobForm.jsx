@@ -41,6 +41,7 @@ function JobForm() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Job description"
+          required
         />
         <button type="submit">Submit Job</button>
       </form>
