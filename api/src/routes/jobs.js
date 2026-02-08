@@ -1,4 +1,5 @@
 const express = require('express');
+const { jobFailures } = require('../metrics');
 
 function jobsRoutes({ pool }) {
     const router = express.Router();

@@ -1,7 +1,17 @@
 const request = require('supertest');
-const app = require('../index');
+const { createApp } = require('../app');
 
 describe('API basic endpoints', () => {
+
+  beforeAll(() => {
+    const pool = {
+      query: jest.fn(),
+      connect: jest.fn(),
+    };
+
+    app = createApp({ pool });
+  });
+
   test('GET /api returns health message', async () => {
     const res = await request(app).get('/api');
 

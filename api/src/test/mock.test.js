@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../index');
+const { createApp } = require('../app');
 
 jest.mock('pg', () => {
   const mClient = {
@@ -26,6 +26,7 @@ describe('Job API DB integration (mocked)', () => {
       release: jest.fn(),
     };
     pool.connect.mockResolvedValue(client);
+    app = createApp({ pool });
   });
 
   test('POST /api/jobs with description inserts job and returns 201', async () => {
