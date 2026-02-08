@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
 import { server } from './mocks/server';
 import { http, HttpResponse } from 'msw';
-import JobsForm from '../src/JobForm';
+import JobsForm from '../src/jobForm';
 import { MemoryRouter } from 'react-router-dom';
 import { userEvent } from '@testing-library/user-event/dist/cjs/setup/index.js';
 

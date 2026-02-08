@@ -24,9 +24,9 @@ jobs:
         run: npm test
 
       - name: Install frontend deps
-        working-directory: frontend
+        working-directory: frontend/src
         run: npm ci
 
       - name: Run frontend tests
-        working-directory: frontend
+        working-directory: frontend/src
         run: npm run test:ci

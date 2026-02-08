@@ -1,7 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
-import JobForm from './JobForm';
-import JobStatus from './JobStatus';
-import NotFound from './NotFound';
+import JobForm from './jobForm';
+import JobStatus from './jobStatus';
+import NotFound from './notFound';
 
 function App() {
   return (
