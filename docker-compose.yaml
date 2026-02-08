@@ -9,7 +9,7 @@ services:
 
   migrate:
     build: ./api
-    command: node migrations/migrate.js
+    command: node migrations/cli.js
     depends_on:
       - postgres
     env_file:

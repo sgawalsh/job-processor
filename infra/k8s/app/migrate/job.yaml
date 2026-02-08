@@ -11,7 +11,7 @@ spec:
       containers:
         - name: migrate
           image: sgawalsh/api:0.1.0
-          command: ["node", "migrations/migrate.js"]
+          command: ["node", "migrations/cli.js"]
           envFrom:
             - configMapRef:
                 name: api-config

@@ -4,7 +4,7 @@ FROM node@sha256:a2f09f3ab9217c692a4e192ea272866ae43b59fabda1209101502bf40e0b976
 WORKDIR /src
 
 # Copy package.json and package-lock.json first for caching
-COPY src/package*.json ./
+COPY package*.json ./
 
 # Install dependencies
 RUN npm install --production
@@ -13,4 +13,4 @@ RUN npm install --production
 COPY src/ .
 COPY migrations/ /src/migrations/
 
-CMD ["node", "index.js"]
+CMD ["node", "server.js"]
