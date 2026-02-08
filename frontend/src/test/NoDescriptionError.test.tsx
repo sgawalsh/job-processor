@@ -17,8 +17,6 @@ test('user can create a job and see job status', async () => {
   const button = screen.getByRole('button', { name: /submit job/i });
   await user.click(button);
 
-  screen.debug();
-
   // Assert job appears
   expect(
     await screen.queryByText('Description: My test job')
