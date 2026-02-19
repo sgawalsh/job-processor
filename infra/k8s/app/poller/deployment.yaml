@@ -24,6 +24,8 @@ spec:
                 name: postgres-config
             - configMapRef:
                 name: redis-config
+            - configMapRef:
+                name: poller-config
             - secretRef:
                 name: postgres-secret
             - secretRef:
