@@ -15,8 +15,10 @@ async function waitForDB() {
     try {
       await pool.query('SELECT 1');
       return;
-    } catch {
-      console.log('Waiting for Postgres...');
+    } catch (err) {
+      console.log('Host:', process.env.POSTGRES_HOST);
+      console.log('PORT:', process.env.POSTGRES_PORT);
+      console.log('Waiting for Postgres...', err.message);
       await new Promise(r => setTimeout(r, 2000));
       attempts++;
     }

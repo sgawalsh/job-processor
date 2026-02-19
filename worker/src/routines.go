@@ -37,7 +37,6 @@ func (w *Worker) executeQueuedJobs(ctx context.Context) {
 			log.Println("Received stop signal")
 			return
 		default:
-			
 			// Wait for job ID from Redis queue
 			result, err := w.redisClient.BLPop(ctx, time.Duration(interval)*time.Second, "jobs:queue").Result()
 			if err != nil {

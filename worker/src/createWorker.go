@@ -52,7 +52,7 @@ func connectPostgres() (*sql.DB, error) {
 // NewWorker initializes the Redis client
 func NewWorker() (*Worker, error) {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("redis:%s", os.Getenv("REDIS_PORT")),
+		Addr:     fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")),
 		Password: os.Getenv("REDIS_PASSWORD"),
 		DB:       0,
 	})

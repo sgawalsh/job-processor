@@ -7,10 +7,9 @@ import (
 	"os"
 )
 
-const maxAttempts = 3
-
-var runningTimeout = os.Getenv("worker_running_timeout")
+var maxAttempts = os.Getenv("worker_max_job_retries")
 var queuedTimeout = os.Getenv("worker_queued_timeout")
+var runningTimeout = os.Getenv("worker_running_timeout")
 
 // Queue jobs in QUEUED state in order to recover any lost jobs due to crashes, idempotent worker prevents double processing
 func queueQueuedJobs(ctx context.Context, tx *sql.Tx) ([]int, error) {

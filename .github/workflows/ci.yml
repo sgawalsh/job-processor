@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  test-api:
+  test-api-frontend:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,3 +30,56 @@ jobs:
       - name: Run frontend tests
         working-directory: frontend/src
         run: npm run test:ci
+        
+  test-worker:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: ${{ vars.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ vars.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ vars.POSTGRES_DB }}
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+    
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${{ vars.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ vars.POSTGRES_PASSWORD }}
+      POSTGRES_DB: ${{ vars.POSTGRES_DB }}
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      worker_max_job_retries: ${{ vars.WORKER_MAX_JOB_RETRIES }}
+      worker_queued_timeout: ${{ vars.WORKER_QUEUED_TIMEOUT }}
+      worker_running_timeout: ${{ vars.WORKER_RUNNING_TIMEOUT }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install migration deps
+        working-directory: api
+        run: npm ci
+
+      - name: Run migrations
+        working-directory: api
+        run: node migrations/cli.js
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Run worker tests
+        working-directory: worker/src
+        run: go test ./...
