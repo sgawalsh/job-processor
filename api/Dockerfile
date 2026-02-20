@@ -1,6 +1,4 @@
-# Use an official Node.js image v25.3
-FROM node@sha256:a2f09f3ab9217c692a4e192ea272866ae43b59fabda1209101502bf40e0b9768
-
+FROM node:24-bookworm-slim@sha256:a81a03dd965b4052269a57fac857004022b522a4bf06e7a739e25e18bce45af2
 WORKDIR /src
 
 # Copy package.json and package-lock.json first for caching
