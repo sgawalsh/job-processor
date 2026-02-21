@@ -3,7 +3,7 @@ module github.com/me/job-processor/worker/src
 go 1.25.5
 
 require (
-	github.com/jackc/pgx/v5 v5.7.6
+	github.com/jackc/pgx/v5 v5.8.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.17.2
 	github.com/stretchr/testify v1.11.1
@@ -25,7 +25,6 @@ require (
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
-	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
