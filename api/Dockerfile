@@ -1,9 +1,7 @@
-FROM node:25-bookworm-slim@sha256:32f45869cf02c26971de72c383d5f99cab002905ed8b515b56df925007941782 AS base
-# FROM gcr.io/distroless/nodejs22-debian12 AS base
-WORKDIR /src
+FROM node:25-alpine3@sha256:b9b5737eabd423ba73b21fe2e82332c0656d571daf1ebf19b0f89d0dd0d3ca93 AS base
 
-# Create non-root user early (better layer caching)
-RUN groupadd -r nodejs && useradd -r -g nodejs nodejs
+RUN apk update && apk upgrade --no-cache
+RUN npm install -g npm@latest
 
 WORKDIR /app
 
@@ -30,9 +28,6 @@ COPY src ./src
 COPY migrations ./migrations
 COPY package.json ./
 
-# Change ownership to non-root
-RUN chown -R nodejs:nodejs /app
-
-USER nodejs
+USER node
 
 CMD ["node", "src/server.js"]
