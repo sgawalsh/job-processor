@@ -36,7 +36,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:16-bookworm
         env:
           POSTGRES_USER: ${{ vars.POSTGRES_USER }}
           POSTGRES_PASSWORD: ${{ vars.POSTGRES_PASSWORD }}
@@ -45,7 +45,7 @@ jobs:
           - 5432:5432
 
       redis:
-        image: redis:7
+        image: redis:8
         ports:
           - 6379:6379
     
