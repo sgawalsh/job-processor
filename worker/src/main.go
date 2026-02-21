@@ -57,11 +57,11 @@ func main() {
 		wg.Go(func() {
 			w.pollPendingJobs(ctx)
 		})
-	case "worker": // Start Redis consumer
+	case "worker": // Start DB jobs consumer
 		prometheus.MustRegister(jobsProcessed)
 		prometheus.MustRegister(jobsFailed)
 		wg.Go(func() {
-			w.executeQueuedJobs(ctx)
+			w.executeDBJobs(ctx)
 		})
 	default:
 		log.Fatal("ROLE must be poller or worker")

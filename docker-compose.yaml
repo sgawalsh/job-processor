@@ -35,7 +35,6 @@ services:
     depends_on:
       - postgres
       - migrate
-      - redis
     env_file:
       - .env
     environment:
@@ -46,7 +45,6 @@ services:
     depends_on:
       - postgres
       - migrate
-      - redis
     env_file:
       - .env
     environment:
@@ -60,19 +58,6 @@ services:
     depends_on:
       - frontend
       - api
-      
-  redis:
-    image: redis:8-alpine@sha256:a308ca111032fa8f306a2dc7be7ba5deb8b777ed5d258c733cddba48a1fd7904
-    restart: unless-stopped
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
-
-  redis-exporter:
-    image: oliver006/redis_exporter:v1@sha256:33fd1d09c3ba5d2354bdedfad62b06ecc54f50680823b1cf801dac9e1fd9d387
-    environment:
-      - REDIS_ADDR=redis:${REDIS_PORT}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter:v0@sha256:e8a170b85eab07c75c2b0f3aa2806be5c2fe5bba46fd0336914e1f36572cde08

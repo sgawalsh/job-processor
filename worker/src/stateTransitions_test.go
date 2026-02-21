@@ -12,47 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestQueuePendingJobs(t *testing.T) {
-	db, ctx := refreshDB(t)
-
-	// Seed data
-	_, err := db.Exec(`
-		INSERT INTO jobs (description, status)
-		VALUES
-		  ('a', 'PENDING'),
-		  ('b', 'PENDING'),
-		  ('c', 'RUNNING')
-	`)
-	require.NoError(t, err)
-
-	tx, err := db.BeginTx(ctx, nil)
-	require.NoError(t, err)
-
-	ids, err := queuePendingJobs(ctx, tx)
-	require.NoError(t, err)
-	require.Len(t, ids, 2)
-
-	require.NoError(t, tx.Commit())
-
-	// Assert DB state
-	rows, err := db.Query(`
-		SELECT status FROM jobs ORDER BY id
-	`)
-	require.NoError(t, err)
-
-	var statuses []string
-	for rows.Next() {
-		var s string
-		rows.Scan(&s)
-		statuses = append(statuses, s)
-	}
-
-	require.Equal(t,
-		[]string{"QUEUED", "QUEUED", "RUNNING"},
-		statuses,
-	)
-}
-
 func TestRequeueStuckRunningJobs(t *testing.T) {
 	db, ctx := refreshDB(t)
 
@@ -66,14 +25,9 @@ func TestRequeueStuckRunningJobs(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
-	tx, err := db.BeginTx(ctx, nil)
-	require.NoError(t, err)
-
-	ids, err := requeueStuckRunningJobs(ctx, tx)
+	ids, err := requeueStuckRunningJobs(ctx, db)
 	require.NoError(t, err)
 	require.Len(t, ids, 1)
-
-	require.NoError(t, tx.Commit())
 
 	// Assert DB state
 	rows, err := db.Query(`
@@ -89,7 +43,7 @@ func TestRequeueStuckRunningJobs(t *testing.T) {
 	}
 
 	require.Equal(t,
-		[]string{"QUEUED", "RUNNING", "RUNNING"},
+		[]string{"PENDING", "RUNNING", "RUNNING"},
 		statuses,
 	)
 }
@@ -100,23 +54,20 @@ func TestClaimJob(t *testing.T) {
 	rows, err := db.QueryContext(ctx, `
 		INSERT INTO jobs (description, status)
 		VALUES
-			('a', 'QUEUED'),
-			('b', 'QUEUED'),
-			('c', 'QUEUED')
+			('a', 'PENDING'),
+			('b', 'PENDING'),
+			('c', 'PENDING')
 		RETURNING id
 	`)
 	require.NoError(t, err)
 
-	rows.Next()
-	var id int
-	rows.Scan(&id)
-	require.Equal(t, 1, id)
-
 	w, err := NewWorker()
 	require.NoError(t, err)
 
-	err = w.claimJob(ctx, id)
+	id, err := w.claimNextJob(ctx)
 	require.NoError(t, err)
+
+	require.Equal(t, 1, id)
 
 	// Assert DB state
 	rows, err = db.Query(`
@@ -132,7 +83,7 @@ func TestClaimJob(t *testing.T) {
 	}
 
 	require.Equal(t,
-		[]string{"RUNNING", "QUEUED", "QUEUED"},
+		[]string{"RUNNING", "PENDING", "PENDING"},
 		statuses,
 	)
 }

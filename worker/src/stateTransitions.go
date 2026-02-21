@@ -8,66 +8,14 @@ import (
 )
 
 var maxAttempts = os.Getenv("worker_max_job_retries")
-var queuedTimeout = os.Getenv("worker_queued_timeout")
 var runningTimeout = os.Getenv("worker_running_timeout")
 
-// Queue jobs in QUEUED state in order to recover any lost jobs due to crashes, idempotent worker prevents double processing
-func queueQueuedJobs(ctx context.Context, tx *sql.Tx) ([]int, error) {
-	rows, err := tx.QueryContext(ctx, `
-		UPDATE jobs
-		SET enqueued_at = NOW()
-		WHERE id IN (
-			SELECT id
-			FROM jobs
-			WHERE status = $1
-			AND (enqueued_at IS NULL OR enqueued_at < NOW() - ($2)::interval)
-			ORDER BY id
-			FOR UPDATE SKIP LOCKED
-			LIMIT 1
-		)
-		RETURNING id;
-	`, StatusQueued, queuedTimeout)
-	if err != nil {
-		return nil, err
-	}
-
-	var jobIDs = rowsToIDs(rows)
-
-	return jobIDs, nil
-}
-
-// UPDATE and get IDs atomically
-func queuePendingJobs(ctx context.Context, tx *sql.Tx) ([]int, error) {
-	rows, err := tx.QueryContext(ctx, `
-		UPDATE jobs
-		SET status = $1,
-		enqueued_at = NOW()
-		WHERE id IN (
-			SELECT id
-			FROM jobs
-			WHERE status = $2
-			ORDER BY id
-			FOR UPDATE SKIP LOCKED
-			LIMIT 10
-		)
-		RETURNING id
-	`, StatusQueued, StatusPending)
-	if err != nil {
-		return nil, err
-	}
-
-	var jobIDs = rowsToIDs(rows)
-
-	return jobIDs, nil
-}
-
 // Requeue stuck RUNNING jobs that have exceeded the time limit
-func requeueStuckRunningJobs(ctx context.Context, tx *sql.Tx) ([]int, error) {
-	rows, err := tx.QueryContext(ctx, `
+func requeueStuckRunningJobs(ctx context.Context, db *sql.DB) ([]int, error) {
+	rows, err := db.QueryContext(ctx, `
 		UPDATE jobs
 		SET status = $1,
-		started_at = NULL,
-		enqueued_at = NOW()
+		started_at = NULL
 		WHERE id IN (
 			SELECT id
 			FROM jobs
@@ -78,7 +26,7 @@ func requeueStuckRunningJobs(ctx context.Context, tx *sql.Tx) ([]int, error) {
 			LIMIT 10
 		)
 		RETURNING id
-	`, StatusQueued, StatusRunning, runningTimeout)
+	`, StatusPending, StatusRunning, runningTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -96,29 +44,37 @@ func requeueStuckRunningJobs(ctx context.Context, tx *sql.Tx) ([]int, error) {
 	return jobIDs, nil
 }
 
-func (w *Worker) claimJob(ctx context.Context, jobID int) error {
-	res, err := w.db.ExecContext(
-		ctx,
-		"UPDATE jobs SET status=$1, started_at=NOW() WHERE id=$2 AND status=$3",
-		StatusRunning,
-		jobID,
-		StatusQueued,
-	)
+func (w *Worker) claimNextJob(ctx context.Context) (int, error) {
+	var jobID int
+	err := w.db.QueryRowContext(ctx, `
+		UPDATE jobs
+		SET status = $1,
+		    started_at = NOW()
+		WHERE id IN (
+			SELECT id
+			FROM jobs
+			WHERE status = $2
+			ORDER BY id
+			FOR UPDATE SKIP LOCKED
+			LIMIT 1
+		)
+		RETURNING id
+	`, StatusRunning, StatusPending).Scan(&jobID)
+
 	if err != nil {
-		return err
+		if err == sql.ErrNoRows {
+			return 0, sql.ErrNoRows
+		}
+		return 0, err
 	}
 
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		return sql.ErrNoRows
-	}
-	return nil
+	return jobID, nil
 }
 
 func (w *Worker) handleJobFailure(ctx context.Context, jobID int, err error) {
 	var attempts int
 
-	//set to requeued or failed based on attempts < max_attempts
+	// increment attempts counter and set to pending or failed based on attempts < max_attempts
 	err2 := w.db.QueryRowContext(ctx, `
         UPDATE jobs
         SET attempts = attempts + 1,
@@ -135,18 +91,4 @@ func (w *Worker) handleJobFailure(ctx context.Context, jobID int, err error) {
 	if err2 != nil {
 		log.Printf("Failed to update retry state for job %d: %v", jobID, err2)
 	}
-}
-
-func rowsToIDs(rows *sql.Rows) []int {
-	defer rows.Close()
-
-	var jobIDs []int
-	for rows.Next() {
-		var id int
-		if err := rows.Scan(&id); err == nil {
-			jobIDs = append(jobIDs, id)
-		}
-	}
-
-	return jobIDs
 }

@@ -9,12 +9,10 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/redis/go-redis/v9"
 )
 
 type Worker struct {
-	redisClient *redis.Client
-	db          *sql.DB
+	db *sql.DB
 }
 
 func connectPostgres() (*sql.DB, error) {
@@ -51,34 +49,19 @@ func connectPostgres() (*sql.DB, error) {
 
 // NewWorker initializes the Redis client
 func NewWorker() (*Worker, error) {
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")),
-		Password: os.Getenv("REDIS_PASSWORD"),
-		DB:       0,
-	})
-
-	// Test connection
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("cannot connect to Redis: %w", err)
-	}
-
 	db, err := connectPostgres()
 	if err != nil {
 		return nil, fmt.Errorf("cannot connect to Postgres: %w", err)
 	}
 
 	// Test connection
-	ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel2()
+	ctx2, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	if err := db.PingContext(ctx2); err != nil {
 		return nil, fmt.Errorf("cannot ping Postgres: %w", err)
 	}
 
 	return &Worker{
-		redisClient: rdb,
-		db:          db,
+		db: db,
 	}, nil
 }

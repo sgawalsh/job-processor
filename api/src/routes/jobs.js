@@ -37,7 +37,7 @@ function jobsRoutes({ pool }) {
 
         try {
             const result = await pool.query(
-                `SELECT id, description, status, created_at, enqueued_at, started_at, attempts, last_error
+                `SELECT id, description, status, created_at, started_at, attempts, last_error
                 FROM jobs
                 WHERE id = $1`,
                 [id]

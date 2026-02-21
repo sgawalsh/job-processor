@@ -6,7 +6,6 @@ async function runMigrations(pool, { enableCron = false } = {}) {
       IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'job_status') THEN
         CREATE TYPE job_status AS ENUM (
           'PENDING',
-          'QUEUED',
           'RUNNING',
           'SUCCEEDED',
           'FAILED'
@@ -22,12 +21,45 @@ async function runMigrations(pool, { enableCron = false } = {}) {
       status job_status NOT NULL DEFAULT 'PENDING',
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW(),
-      enqueued_at TIMESTAMP,
       started_at TIMESTAMP,
       attempts INT DEFAULT 0,
       last_error TEXT
     )
   `);
+
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION notify_jobs_available()
+    RETURNS trigger AS $$
+    BEGIN
+      IF NEW.status = 'PENDING'
+        AND (TG_OP = 'INSERT' OR OLD.status IS DISTINCT FROM NEW.status)
+      THEN
+        PERFORM pg_notify('jobs_available', '');
+      END IF;
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;
+  `);
+
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1
+        FROM pg_trigger
+        WHERE tgname = 'jobs_notify_trigger'
+      ) THEN
+        CREATE TRIGGER jobs_notify_trigger
+        AFTER INSERT OR UPDATE OF status
+        ON jobs
+        FOR EACH ROW
+        EXECUTE FUNCTION notify_jobs_available();
+      END IF;
+    END
+    $$;
+  `);
+
+
   if (enableCron) {
     // Ensure pg_cron extension exists
     await pool.query(`CREATE EXTENSION IF NOT EXISTS pg_cron;`);

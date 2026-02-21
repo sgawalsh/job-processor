@@ -2,18 +2,18 @@ package main
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"log"
 	"os"
-	"slices"
 	"strconv"
 	"time"
 
-	"github.com/redis/go-redis/v9"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 const (
 	StatusPending   = "PENDING"
-	StatusQueued    = "QUEUED"
 	StatusRunning   = "RUNNING"
 	StatusSucceeded = "SUCCEEDED"
 	StatusFailed    = "FAILED"
@@ -22,74 +22,86 @@ const (
 var pollingInterval = os.Getenv("worker_poll_interval")
 var workerTimeoutInterval = os.Getenv("worker_execution_timeout_interval")
 
-// Run starts consuming jobs from Redis
-func (w *Worker) executeQueuedJobs(ctx context.Context) {
-	log.Println("Worker is running...")
+func waitForNotification(ctx context.Context, conn *sql.Conn, timeout time.Duration) error {
+	return conn.Raw(func(driverConn any) error {
+		// Use type assertion to get the stdlib.Conn wrapper
+		// Then call .Conn() to get the native *pgx.Conn
+		pgxConn := driverConn.(*stdlib.Conn).Conn()
 
-	interval, err := strconv.Atoi(workerTimeoutInterval)
+		waitCtx, cancel := context.WithTimeout(ctx, timeout)
+		defer cancel()
+
+		_, err := pgxConn.WaitForNotification(waitCtx)
+		return err
+	})
+}
+
+func (w *Worker) executeDBJobs(ctx context.Context) {
+	log.Println("DB worker is running...")
+
+	// Dedicated connection for LISTEN / NOTIFY
+	conn, err := w.db.Conn(ctx)
+	if err != nil {
+		log.Fatalf("Failed to get DB conn for LISTEN: %v", err)
+	}
+	defer conn.Close()
+
+	// Start listening
+	if _, err := conn.ExecContext(ctx, "LISTEN jobs_available"); err != nil {
+		log.Fatalf("LISTEN failed: %v", err)
+	}
+	// Parse timeout interval
+	workerTimeoutInterval, err := strconv.Atoi(workerTimeoutInterval)
 	if err != nil {
 		log.Fatalf("Failed to parse worker_execution_timeout_interval: %v", err)
+		return
 	}
 
+	log.Println("Listening for job notifications...")
 	for {
 		select {
 		case <-ctx.Done():
-			log.Println("Received stop signal")
+			log.Println("Worker shutting down")
 			return
+
 		default:
-			// Wait for job ID from Redis queue
-			result, err := w.redisClient.BLPop(ctx, time.Duration(interval)*time.Second, "jobs:queue").Result()
-			if err != nil {
-				if err == redis.Nil {
-					// Queue was empty, nothing to process, no log needed
+			// Wait for notification OR timeout
+			err = waitForNotification(ctx, conn, time.Duration(workerTimeoutInterval)*time.Second)
+			if err != nil && !errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil {
+				log.Printf("Notification wait error: %v", err)
+			}
+
+			// Drain all available jobs
+			for {
+				jobID, err := w.claimNextJob(ctx)
+				if err != nil {
+					if err == sql.ErrNoRows {
+						break // no available work
+					}
+					log.Printf("Failed to claim job: %v", err)
+					break
+				}
+
+				log.Printf("Processing job %d", jobID)
+
+				if err := doWork(); err != nil {
+					w.handleJobFailure(ctx, jobID, err)
+					jobsFailed.Inc()
+					log.Printf("Job %d failed: %v", jobID, err)
 					continue
 				}
-				log.Printf("Error fetching job: %v", err)
-				time.Sleep(1 * time.Second)
-				continue
+
+				if _, err := w.db.ExecContext(ctx, `
+					UPDATE jobs
+					SET status = $1
+					WHERE id = $2 AND status = $3
+				`, StatusSucceeded, jobID, StatusRunning); err != nil {
+					log.Printf("Failed to set job status to SUCCEEDED for job %d: %v", jobID, err)
+					continue
+				}
+
+				jobsProcessed.Inc()
 			}
-
-			jobIDStr := result[1]
-			jobID, err := strconv.Atoi(jobIDStr)
-			if err != nil {
-				log.Printf("Invalid jobID in queue: %q", jobIDStr)
-				continue // poison message, skip
-			}
-
-			// Fetch job from Postgres
-			var description, status string
-			err = w.db.QueryRowContext(ctx, "SELECT description, status FROM jobs WHERE id=$1", jobID).Scan(&description, &status)
-			if err != nil {
-				log.Printf("Error fetching job from DB: %v", err)
-				continue
-			}
-
-			log.Printf("Found job %d: %s (current status: %s)", jobID, description, status)
-
-			err = w.claimJob(ctx, jobID)
-			if err != nil {
-				log.Printf("Error claiming job %d: %v", jobID, err)
-				continue
-			}
-
-			log.Printf("Processing job: %d", jobID)
-
-			err = doWork()
-			if err != nil {
-				w.handleJobFailure(ctx, jobID, err)
-				jobsFailed.Inc()
-				log.Printf("Job %d failed: %v", jobID, err)
-				continue
-			}
-
-			// Update job status to "completed"
-			_, err = w.db.ExecContext(ctx, "UPDATE jobs SET status=$1 WHERE id=$2 and status=$3", StatusSucceeded, jobID, StatusRunning)
-			if err != nil {
-				log.Printf("Error updating job %d to completed status: %v", jobID, err)
-				continue
-			}
-			jobsProcessed.Inc()
-			log.Printf("Job %d marked as completed", jobID)
 		}
 	}
 }
@@ -109,53 +121,14 @@ func (w *Worker) pollPendingJobs(ctx context.Context) {
 			log.Println("Poller stopping...")
 			return
 		case <-ticker.C:
-			tx, err := w.db.BeginTx(ctx, nil)
-			if err != nil {
-				log.Printf("Poller: failed to begin tx: %v", err)
-				continue
-			}
-
-			// Queue jobs in QUEUED state in order to recover any lost jobs due to crashes, idempotent worker prevents double processing
-			jobIDs, err := queueQueuedJobs(ctx, tx)
-			if err != nil {
-				log.Printf("Poller: failed to enqueue queued jobs: %v", err)
-				tx.Rollback()
-				continue
-			}
-
-			// Set PENDING jobs to QUEUED in DB and get their IDs
-			pendingJobIDs, err := queuePendingJobs(ctx, tx)
-			if err != nil {
-				log.Printf("Poller: failed to enqueue pending jobs: %v", err)
-				tx.Rollback()
-				continue
-			}
-
-			// Requeue stuck RUNNING jobs
-			stuckJobIDs, err := requeueStuckRunningJobs(ctx, tx)
+			jobIDs, err := requeueStuckRunningJobs(ctx, w.db) // move stuck running jobs to PENDING
 			if err != nil {
 				log.Printf("Poller: failed to requeue stuck running jobs: %v", err)
-				tx.Rollback()
 				continue
-			}
-
-			if err := tx.Commit(); err != nil {
-				log.Printf("Poller: commit failed: %v", err)
-				continue
-			}
-
-			jobIDs = slices.Concat(jobIDs, pendingJobIDs, stuckJobIDs)
-
-			// Enqueue committed jobs to Redis
-			for _, id := range jobIDs {
-				if err := w.redisClient.RPush(ctx, "jobs:queue", id).Err(); err != nil {
-					log.Printf("Poller: failed to enqueue job %d: %v", id, err)
-				}
 			}
 			if len(jobIDs) > 0 {
 				log.Printf("Poller: enqueued %d jobs", len(jobIDs))
 			}
-
 		}
 	}
 }
