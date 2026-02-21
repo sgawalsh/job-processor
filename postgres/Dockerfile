@@ -1,4 +1,4 @@
-FROM postgres:16-bookworm@sha256:dc1229cd4629538dfde35a9f808fdba5a86e82ca947ff658f251db6fed03dc45
+FROM postgres:18-bookworm@sha256:db87f88e316d16637f9f906ed83c0118f81ef1cecb1680b77bb0f4b7187643d5
 
 # Install cron extension
 RUN apt-get update && apt-get install -y postgresql-16-cron \
