@@ -7,5 +7,5 @@ COPY src .
 RUN npm run build
 
 #stable-alpine v3.23
-FROM nginx@sha256:57e903d5641d80334bd51985b8bcecad80d36b30cd0b6408b851333fca1d88bf
+FROM nginx@sha256:341bf0f3ce6c5277d6002cf6e1fb0319fa4252add24ab6a0e262e0056d313208
 COPY --from=build /app/dist /usr/share/nginx/html
