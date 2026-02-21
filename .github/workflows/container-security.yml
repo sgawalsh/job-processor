@@ -1,0 +1,55 @@
+name: Container Security Scan
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  check-api:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -t job-processor-api ./api
+
+      - name: Scan API image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: job-processor-api
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+  check-frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build frontend image
+        run: docker build -f ./frontend/Dockerfile.prod -t job-processor-frontend ./frontend
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: job-processor-frontend
+          severity: HIGH,CRITICAL
+          exit-code: 1
+
+  check-worker:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build worker image
+        run: docker build -t job-processor-worker ./worker
+
+      - name: Scan worker image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: job-processor-worker
+          severity: HIGH,CRITICAL
+          exit-code: 1
