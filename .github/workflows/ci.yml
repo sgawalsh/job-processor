@@ -76,7 +76,7 @@ jobs:
         working-directory: api
         run: node migrations/cli.js
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.22"
 
