@@ -12,7 +12,7 @@ let app;
 
 beforeAll(async () => {
   // Start the container
-  container = await new PostgreSqlContainer('postgres:15')
+  container = await new PostgreSqlContainer('postgres:18-bookworm')
     .withDatabase('testdb')
     .withUsername('testuser')
     .withPassword('testpass')

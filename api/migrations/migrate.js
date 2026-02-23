@@ -52,6 +52,8 @@ async function runMigrations(pool, { enableCron = false } = {}) {
     await pool.query(`
       SELECT cron.schedule($1, $2, $3);
     `, [jobName, schedule, sqlCommand]);
+
+    console.log(`Scheduled cron job '${jobName}' with schedule '${schedule}' to clean up succeeded jobs older than ${retention}.`);
   }
 }
 
