@@ -1,6 +1,6 @@
 module github.com/me/job-processor/worker/src
 
-go 1.25.5
+go 1.26
 
 require (
 	github.com/jackc/pgx/v5 v5.7.6
