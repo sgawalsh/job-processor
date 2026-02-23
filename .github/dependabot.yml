@@ -1,5 +1,7 @@
 version: 2
 updates:
+  # Github actions
+  
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -11,48 +13,70 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    target-branch: "postgres-notifications"
+
+  # Docker compose
+  
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "postgres-notifications"
+
+  # Postgres - docker
 
   - package-ecosystem: "docker"
     directory: "/postgres"
     schedule:
       interval: "weekly"
+    target-branch: "postgres-notifications"
 
-  - package-ecosystem: "docker"
-    directory: "/"
-    schedule:
-      interval: "weekly"
+  # API - docker and npm
 
   - package-ecosystem: "docker"
     directory: "/api"
     schedule:
       interval: "weekly"
+    target-branch: "postgres-notifications"
 
   - package-ecosystem: "npm"
     directory: "/api"
     schedule:
       interval: "weekly"
+    target-branch: "postgres-notifications"
+
+  # Frontend - docker and npm
 
   - package-ecosystem: "docker"
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    target-branch: "postgres-notifications"
 
   - package-ecosystem: "npm"
     directory: "/frontend/src"
     schedule:
       interval: "weekly"
+    target-branch: "postgres-notifications"
+
+  # Worker - docker and gomod
 
   - package-ecosystem: "docker"
     directory: "/worker"
     schedule:
       interval: "weekly"
+    target-branch: "postgres-notifications"
 
   - package-ecosystem: "gomod"
     directory: "/worker/src"
     schedule:
       interval: "weekly"
+    target-branch: "postgres-notifications"
+
+  # Nginx - docker
 
   - package-ecosystem: "docker"
     directory: "/infra/nginx"
     schedule:
       interval: "weekly"
+    target-branch: "postgres-notifications"
