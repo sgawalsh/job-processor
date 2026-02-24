@@ -5,4 +5,5 @@ metadata:
   namespace: app
 data:
   worker_poll_interval: "2"
+  worker_queued_timeout: "5 minutes"
   worker_running_timeout: "10 minutes"

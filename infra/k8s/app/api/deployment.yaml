@@ -15,8 +15,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: sgawalsh/api:0.1.0
-          imagePullPolicy: IfNotPresent
+          image: sgawalsh/redis-queue-api:latest
           ports:
             - name: http
               containerPort: 8080

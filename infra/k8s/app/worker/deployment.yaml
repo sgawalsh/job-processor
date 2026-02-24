@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: worker
-          image: sgawalsh/worker:0.1.0
+          image: sgawalsh/redis-queue-worker:latest
           ports:
             - name: metrics
               containerPort: 2112
