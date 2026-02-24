@@ -1,9 +1,4 @@
 services:
-  frontend:
-    build:
-      dockerfile: Dockerfile.prod
-
   nginx:
     build:
-      args:
-        ENV: prod
+      dockerfile: /infra/nginx/Dockerfile.prod

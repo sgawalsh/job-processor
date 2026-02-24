@@ -23,13 +23,7 @@ services:
       - postgres
     env_file:
       - .env
-        
-  frontend:
-    build:
-      context: ./frontend
-    depends_on:
-      - api
-
+  
   poller:
     build: ./worker
     depends_on:
@@ -54,11 +48,10 @@ services:
 
   nginx:
     build:
-      context: ./infra/nginx
+      context: .
     ports:
       - "8080:80"
     depends_on:
-      - frontend
       - api
       
   redis:

@@ -21,19 +21,19 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: 1
 
-  check-frontend:
+  check-nginx:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v6
 
-      - name: Build frontend image
-        run: docker build -f ./frontend/Dockerfile.prod -t job-processor-frontend ./frontend
+      - name: Build nginx image
+        run: docker build -f ./infra/nginx/Dockerfile.prod -t job-processor-nginx .
 
-      - name: Scan frontend image
+      - name: Scan nginx image
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: job-processor-frontend
+          image-ref: job-processor-nginx
           severity: HIGH,CRITICAL
           exit-code: 1
 
