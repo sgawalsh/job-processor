@@ -1,9 +1,9 @@
 services:
   frontend:
-    build:
-      dockerfile: Dockerfile.dev
+    build: ./frontend
 
   nginx:
     build:
-      args:
-        ENV: dev
+      dockerfile: /infra/nginx/Dockerfile.dev
+    depends_on:
+      - frontend
