@@ -10,7 +10,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: sgawalsh/api:0.1.0
+          image: sgawalsh/redis-queue-api:latest
           command: ["node", "migrations/cli.js"]
           envFrom:
             - configMapRef:

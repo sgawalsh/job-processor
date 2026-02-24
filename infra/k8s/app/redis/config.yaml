@@ -4,5 +4,6 @@ metadata:
   name: redis-config
   namespace: app
 data:
-  REDIS_PORT: "6379"
   REDIS_ADDR: "redis://redis:6379"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
