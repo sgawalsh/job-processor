@@ -51,7 +51,6 @@ jobs:
       POSTGRES_PASSWORD: ${{ vars.POSTGRES_PASSWORD }}
       POSTGRES_DB: ${{ vars.POSTGRES_DB }}
       worker_max_job_retries: ${{ vars.WORKER_MAX_JOB_RETRIES }}
-      worker_queued_timeout: ${{ vars.WORKER_QUEUED_TIMEOUT }}
       worker_running_timeout: ${{ vars.WORKER_RUNNING_TIMEOUT }}
 
     steps:

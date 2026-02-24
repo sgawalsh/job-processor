@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: poller
-          image: sgawalsh/worker:0.1.0
+          image: sgawalsh/postgres-notifications-worker:latest
           env:
             - name: ROLE
               value: poller
