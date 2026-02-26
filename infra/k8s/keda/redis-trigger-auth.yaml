@@ -1,0 +1,10 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: redis-trigger-auth
+  namespace: app
+spec:
+  secretTargetRef:
+    - parameter: password
+      name: redis-secret
+      key: REDIS_PASSWORD
