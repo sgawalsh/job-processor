@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "express": "^5.2.1",
+    "minimatch": "^10.2.4",
     "pg": "^8.11.1",
     "prom-client": "^15.1.3"
   },
