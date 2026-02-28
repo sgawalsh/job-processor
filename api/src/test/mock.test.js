@@ -29,7 +29,7 @@ describe('Job API DB integration (mocked)', () => {
     app = createApp({ pool });
   });
 
-  test('POST /api/jobs with description inserts job and returns 201', async () => {
+  test('POST /jobs with description inserts job and returns 201', async () => {
     const fakeJob = { id: 1, description: 'Test job' };
 
     // Simulate the DB returning the inserted job
@@ -43,7 +43,7 @@ describe('Job API DB integration (mocked)', () => {
     });
 
     const res = await request(app)
-      .post('/api/jobs')
+      .post('/jobs')
       .send({ description: 'Test job' });
 
     expect(res.statusCode).toBe(201);
@@ -59,7 +59,7 @@ describe('Job API DB integration (mocked)', () => {
     expect(client.release).toHaveBeenCalled();
   });
 
-  test('POST /api/jobs DB failure triggers rollback and 500', async () => {
+  test('POST /jobs DB failure triggers rollback and 500', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     const error = new Error('DB error');
 
@@ -70,7 +70,7 @@ describe('Job API DB integration (mocked)', () => {
     });
 
     const res = await request(app)
-      .post('/api/jobs')
+      .post('/jobs')
       .send({ description: 'Fail job' });
 
     expect(res.statusCode).toBe(500);

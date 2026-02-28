@@ -10,10 +10,10 @@ function createApp({ pool }) {
   app.use(express.json());
   
   app.use(metricsMiddleware);
-  app.use('/api/jobs', jobsRoutes({ pool }));
+  app.use('/jobs', jobsRoutes({ pool }));
   app.get('/metrics', metricsEndpoint);
 
-  app.get('/api', (_req, res) => {
+  app.get('/health', (_req, res) => {
     res.send('API is running');
   });
 

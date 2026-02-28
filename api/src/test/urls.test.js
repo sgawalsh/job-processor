@@ -12,8 +12,8 @@ describe('API basic endpoints', () => {
     app = createApp({ pool });
   });
 
-  test('GET /api returns health message', async () => {
-    const res = await request(app).get('/api');
+  test('GET /health returns health message', async () => {
+    const res = await request(app).get('/health');
 
     expect(res.statusCode).toBe(200);
     expect(res.text).toBe('API is running');
@@ -27,9 +27,9 @@ describe('API basic endpoints', () => {
     expect(res.text).toContain('http_requests_total');
   });
 
-  test('POST /api/jobs without description returns 400', async () => {
+  test('POST /jobs without description returns 400', async () => {
     const res = await request(app)
-      .post('/api/jobs')
+      .post('/jobs')
       .send({}); // no description
 
     expect(res.statusCode).toBe(400);
