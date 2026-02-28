@@ -10,7 +10,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: sgawalsh/postgres-notifications-api:latest
+          image: sgawalsh/postgres-notifications-migrate:latest
           command: ["node", "migrations/cli.js"]
           envFrom:
             - configMapRef:

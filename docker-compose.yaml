@@ -8,15 +8,18 @@ services:
       - pgdata:/var/lib/postgresql
 
   migrate:
-    build: ./api
-    command: node migrations/cli.js
+    build:
+      context: ./api
+      target: migrate
     depends_on:
       - postgres
     env_file:
       - .env
 
   api:
-    build: ./api
+    build:
+      context: ./api
+      target: runtime
     expose:
       - "8080"
     depends_on:
