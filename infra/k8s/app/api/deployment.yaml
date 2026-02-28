@@ -26,4 +26,3 @@ spec:
                 name: postgres-config
             - secretRef:
                 name: postgres-secret
-
