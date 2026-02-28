@@ -7,7 +7,7 @@ COPY frontend/src/ .
 RUN npm run build
 
 # Stage 2: Final Nginx Image
-FROM nginx:alpine-perl@sha256:57e903d5641d80334bd51985b8bcecad80d36b30cd0b6408b851333fca1d88bf
+FROM nginx:stable-alpine@sha256:15e96e59aa3b0aada3a121296e3bce117721f42d88f5f64217ef4b18f458c6ab
 
 # Copy the static files from the builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
