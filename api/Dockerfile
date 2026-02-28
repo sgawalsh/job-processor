@@ -5,29 +5,32 @@ RUN npm install -g npm@latest
 
 WORKDIR /app
 
-# ---- Dependencies Layer ----
-FROM base AS deps
-
 COPY package.json package-lock.json ./
-
-# Deterministic install, no dev deps
 RUN npm ci --omit=dev
 
-# ---- Runtime Layer ----
-FROM base AS runtime
-
-ENV NODE_ENV=production
+# ---------- Runtime ----------
+FROM gcr.io/distroless/nodejs24:latest AS runtime
 
 WORKDIR /app
 
-# Copy node_modules from deps stage
-COPY --from=deps /app/node_modules ./node_modules
+# copy production node_modules
+COPY --from=base /app/node_modules ./node_modules
 
-# Copy only required runtime files
+# copy application source
 COPY src ./src
 COPY migrations ./migrations
 COPY package.json ./
 
-USER node
+USER nonroot
+CMD ["src/server.js"]
 
-CMD ["node", "src/server.js"]
+# ---------- Migration Image ----------
+FROM base AS migrate
+WORKDIR /app
+
+COPY --from=base /app/node_modules ./node_modules
+COPY src ./src
+COPY migrations ./migrations
+COPY package.json ./
+
+CMD ["node", "migrations/cli.js"]
