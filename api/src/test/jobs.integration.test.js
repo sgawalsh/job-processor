@@ -35,10 +35,10 @@ afterAll(async () => {
   if (container) await container.stop();
 });
 
-describe('POST /api/jobs integration', () => {
+describe('POST /jobs integration', () => {
   test('creates a job successfully', async () => {
     const res = await request(app)
-      .post('/api/jobs')
+      .post('/jobs')
       .send({ description: 'Integration job' });
 
     expect(res.statusCode).toBe(201);
@@ -50,7 +50,7 @@ describe('POST /api/jobs integration', () => {
   });
 
   test('returns 400 if description missing', async () => {
-    const res = await request(app).post('/api/jobs').send({});
+    const res = await request(app).post('/jobs').send({});
     expect(res.statusCode).toBe(400);
     expect(res.body).toEqual({ error: 'Description is required' });
   });
