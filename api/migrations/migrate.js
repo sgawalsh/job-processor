@@ -13,6 +13,7 @@ async function runMigrations(pool, { enableCron = false } = {}) {
       END IF;
     END$$;
   `);
+
   // Create jobs table
   await pool.query(`
     CREATE TABLE IF NOT EXISTS jobs (
@@ -26,7 +27,15 @@ async function runMigrations(pool, { enableCron = false } = {}) {
       last_error TEXT
     )
   `);
-
+  
+  // Create index on status for efficient querying of pending jobs for KEDA
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_jobs_status_pending
+    ON jobs(status)
+    WHERE status = 'PENDING';
+  `);
+  
+  // Create trigger function to notify when new pending jobs are available
   await pool.query(`
     CREATE OR REPLACE FUNCTION notify_jobs_available()
     RETURNS trigger AS $$
@@ -40,7 +49,8 @@ async function runMigrations(pool, { enableCron = false } = {}) {
     END;
     $$ LANGUAGE plpgsql;
   `);
-
+  
+  // Create trigger to call the function after insert or status update
   await pool.query(`
     DO $$
     BEGIN

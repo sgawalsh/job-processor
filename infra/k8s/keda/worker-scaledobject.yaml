@@ -1,0 +1,25 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker-scaledobject
+  namespace: app
+spec:
+  scaleTargetRef:
+    name: worker
+
+  minReplicaCount: 2
+  maxReplicaCount: 20
+  pollingInterval: 10
+  cooldownPeriod: 30
+
+  triggers:
+    - type: postgresql
+      metadata:
+        host: postgres.app.svc.cluster.local
+        port: "5432"
+        dbName: jobs
+        sslmode: disable
+        query: "SELECT COUNT(*) FROM jobs WHERE status = 'pending';"
+        targetQueryValue: "5"
+      authenticationRef:
+        name: postgres-trigger-auth
