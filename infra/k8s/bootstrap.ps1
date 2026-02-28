@@ -1,4 +1,4 @@
-$timeout = 60
+$timeout = 120
 
 Write-Host "Bootstrapping Kubernetes Cluster..."
 
@@ -64,31 +64,77 @@ kubectl apply -R -f .\monitoring\dashboards\
 # 7. Install Ingress Controller
 ############################################
 Write-Host "Installing ingress controller..."
-kubectl apply -R -f .\ingress\
+kubectl apply -f .\ingress\controller.yaml
 
-$interval = 5
+Write-Host "Waiting for ingress controller deployment..."
+
+kubectl wait --namespace ingress-nginx `
+  --for=condition=available deployment/ingress-nginx-controller `
+  --timeout=120s
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Ingress controller failed to become ready."
+    exit 1
+}
+
+Write-Host "Ingress controller is ready."
+
+Write-Host "Waiting for admission webhook service endpoints..."
+
+$timeoutSeconds = 60
+$interval = 3
 $elapsed = 0
 
-Write-Host "Waiting for ingress controller pod and webhook service..."
-
 do {
-    $podReady = kubectl get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx -o json | ConvertFrom-Json | `
-        ForEach-Object { $_.status.conditions | Where-Object { $_.type -eq "Ready" -and $_.status -eq "True" } } | Measure-Object | Select-Object -ExpandProperty Count
+    $endpoints = kubectl get endpoints ingress-nginx-controller-admission `
+        -n ingress-nginx `
+        -o jsonpath='{.subsets[*].addresses[*].ip}'
 
-    $podCount = (kubectl get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx | Select-Object -Skip 1 | Measure-Object).Count
-
-    if ($podReady -eq $podCount -and $podCount -gt 0) { break }
+    if ($endpoints) { break }
 
     Start-Sleep -Seconds $interval
     $elapsed += $interval
-} while ($elapsed -lt $timeout)
 
-Write-Host "Ingress controller pods are ready."
+} while ($elapsed -lt $timeoutSeconds)
+
+if (-not $endpoints) {
+    Write-Error "Admission webhook endpoints not ready."
+    exit 1
+}
+
+Write-Host "Admission webhook is ready."
+
+
 
 ############################################
 # 8. Apply Ingress Resource
 ############################################
-Write-Host "Applying ingress resource..."
-kubectl apply -f .\ingress\ingress.yaml
+Write-Host "Applying ingress resources..."
+
+$interval = 5
+$elapsed = 0
+$success = $false
+
+do {
+    kubectl apply -f .\ingress\api-ingress.yaml 2>$null
+    kubectl apply -f .\ingress\frontend-ingress.yaml 2>$null
+
+    if ($LASTEXITCODE -eq 0) {
+        $success = $true
+        break
+    }
+
+    Write-Host "Webhook not ready yet, retrying..."
+    Start-Sleep -Seconds $interval
+    $elapsed += $interval
+
+} while ($elapsed -lt $timeout)
+
+if (-not $success) {
+    Write-Error "Failed to apply ingress resources after waiting."
+    exit 1
+}
+
+Write-Host "Ingress resources applied successfully."
 
 Write-Host "Cluster bootstrap complete"
