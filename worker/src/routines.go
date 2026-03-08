@@ -57,15 +57,6 @@ func (w *Worker) executeQueuedJobs(ctx context.Context) {
 			}
 
 			// Fetch job from Postgres
-			var description, status string
-			err = w.db.QueryRowContext(ctx, "SELECT description, status FROM jobs WHERE id=$1", jobID).Scan(&description, &status)
-			if err != nil {
-				log.Printf("Error fetching job from DB: %v", err)
-				continue
-			}
-
-			log.Printf("Found job %d: %s (current status: %s)", jobID, description, status)
-
 			err = w.claimJob(ctx, jobID)
 			if err != nil {
 				log.Printf("Error claiming job %d: %v", jobID, err)
