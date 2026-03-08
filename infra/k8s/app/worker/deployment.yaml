@@ -20,8 +20,10 @@ spec:
             - name: metrics
               containerPort: 2112
           env:
-            - name: ROLE
+            - name: role
               value: worker
+            - name: worker_concurrency
+              value: "3"
           envFrom:
             - configMapRef:
                 name: postgres-config
