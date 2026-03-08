@@ -4,5 +4,6 @@ metadata:
   name: worker-config
   namespace: app
 data:
+  worker_concurrency: "3"
   worker_execution_timeout_interval: "5"
   worker_max_job_retries: "3"
