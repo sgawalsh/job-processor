@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -52,7 +53,7 @@ func main() {
 		http.ListenAndServe(":2112", nil)
 	})
 
-	switch os.Getenv("ROLE") {
+	switch os.Getenv("role") {
 	case "poller": // Start poller
 		wg.Go(func() {
 			w.pollPendingJobs(ctx)
@@ -60,11 +61,19 @@ func main() {
 	case "worker": // Start DB jobs consumer
 		prometheus.MustRegister(jobsProcessed)
 		prometheus.MustRegister(jobsFailed)
-		wg.Go(func() {
-			w.executeDBJobs(ctx)
-		})
+
+		concurrency, err := strconv.Atoi(os.Getenv("worker_concurrency"))
+		if err != nil {
+			concurrency = 1
+		}
+
+		for i := 0; i < concurrency; i++ {
+			wg.Go(func() {
+				w.executeDBJobs(ctx)
+			})
+		}
 	default:
-		log.Fatal("ROLE must be poller or worker")
+		log.Fatal("role must be poller or worker")
 	}
 
 	// Handle shutdown signals

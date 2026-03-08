@@ -35,7 +35,7 @@ services:
     env_file:
       - .env
     environment:
-      ROLE: poller
+      role: poller
 
   worker:
     build: ./worker
@@ -45,7 +45,10 @@ services:
     env_file:
       - .env
     environment:
-      ROLE: worker
+      role: worker
+      worker_concurrency: "${worker_concurrency:-1}"
+    deploy:
+      replicas: 2
 
   nginx:
     build:
