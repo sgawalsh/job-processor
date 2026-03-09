@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migrate-config
+  namespace: app
+data:
+  cron_enabled: "true"
+  cron_schedule: "0 * * * *"
+  cron_job_retention: "1 day"

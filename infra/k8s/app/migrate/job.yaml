@@ -16,6 +16,8 @@ spec:
             - configMapRef:
                 name: api-config
             - configMapRef:
+                name: migrate-config
+            - configMapRef:
                 name: postgres-config
             - secretRef:
                 name: postgres-secret
