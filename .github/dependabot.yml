@@ -26,31 +26,49 @@ updates:
     directory: "/api"
     schedule:
       interval: "weekly"
+    groups:
+      api-docker:
+        patterns: ["*"]
 
   - package-ecosystem: "npm"
     directory: "/api"
     schedule:
       interval: "weekly"
+    groups:
+      api-npm:
+        patterns: ["*"]
 
   - package-ecosystem: "docker"
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    groups:
+      frontend-docker:
+        patterns: ["*"]
 
   - package-ecosystem: "npm"
     directory: "/frontend/src"
     schedule:
       interval: "weekly"
+    groups:
+      frontend-npm:
+        patterns: ["*"]
 
   - package-ecosystem: "docker"
     directory: "/worker"
     schedule:
       interval: "weekly"
+    groups:
+      worker-docker:
+        patterns: ["*"]
 
   - package-ecosystem: "gomod"
     directory: "/worker/src"
     schedule:
       interval: "weekly"
+    groups:
+      worker-go:
+        patterns: ["*"]
 
   - package-ecosystem: "docker"
     directory: "/infra/nginx"
