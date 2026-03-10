@@ -52,7 +52,7 @@ describe('Job API DB integration (mocked)', () => {
     // Check that BEGIN, INSERT, COMMIT were called
     expect(client.query).toHaveBeenCalledWith('BEGIN');
     expect(client.query).toHaveBeenCalledWith(
-      'INSERT INTO jobs(description) VALUES($1) RETURNING id, description',
+      'INSERT INTO jobs(description) VALUES($1) RETURNING public_id, description',
       ['Test job']
     );
     expect(client.query).toHaveBeenCalledWith('COMMIT');
