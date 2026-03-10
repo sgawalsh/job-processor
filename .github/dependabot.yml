@@ -74,3 +74,90 @@ updates:
     directory: "/infra/nginx"
     schedule:
       interval: "weekly"
+
+  # Duplicate blocks for postgres-notifications branch
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    target-branch: "postgres-notifications"
+
+  - package-ecosystem: "docker"
+    directory: "/postgres"
+    schedule:
+      interval: "weekly"
+    target-branch: "postgres-notifications"
+
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "postgres-notifications"
+
+  - package-ecosystem: "docker"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+    groups:
+      api-docker:
+        patterns: ["*"]
+    target-branch: "postgres-notifications"
+
+  - package-ecosystem: "npm"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+    groups:
+      api-npm:
+        patterns: ["*"]
+    target-branch: "postgres-notifications"
+
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    groups:
+      frontend-docker:
+        patterns: ["*"]
+    target-branch: "postgres-notifications"
+
+  - package-ecosystem: "npm"
+    directory: "/frontend/src"
+    schedule:
+      interval: "weekly"
+    groups:
+      frontend-npm:
+        patterns: ["*"]
+    target-branch: "postgres-notifications"
+
+  - package-ecosystem: "docker"
+    directory: "/worker"
+    schedule:
+      interval: "weekly"
+    groups:
+      worker-docker:
+        patterns: ["*"]
+    target-branch: "postgres-notifications"
+
+  - package-ecosystem: "gomod"
+    directory: "/worker/src"
+    schedule:
+      interval: "weekly"
+    groups:
+      worker-go:
+        patterns: ["*"]
+    target-branch: "postgres-notifications"
+
+  - package-ecosystem: "docker"
+    directory: "/infra/nginx"
+    schedule:
+      interval: "weekly"
+    target-branch: "postgres-notifications"
