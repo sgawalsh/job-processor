@@ -13,7 +13,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    target-branch: "postgres-notifications"
 
   # Docker compose
   
@@ -21,7 +20,6 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    target-branch: "postgres-notifications"
 
   # Postgres - docker
 
@@ -29,7 +27,6 @@ updates:
     directory: "/postgres"
     schedule:
       interval: "weekly"
-    target-branch: "postgres-notifications"
 
   # API - docker and npm
 
@@ -37,13 +34,17 @@ updates:
     directory: "/api"
     schedule:
       interval: "weekly"
-    target-branch: "postgres-notifications"
+    groups:
+      api-docker:
+        patterns: ["*"]
 
   - package-ecosystem: "npm"
     directory: "/api"
     schedule:
       interval: "weekly"
-    target-branch: "postgres-notifications"
+    groups:
+      api-npm:
+        patterns: ["*"]
 
   # Frontend - docker and npm
 
@@ -51,13 +52,17 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "weekly"
-    target-branch: "postgres-notifications"
+    groups:
+      frontend-docker:
+        patterns: ["*"]
 
   - package-ecosystem: "npm"
     directory: "/frontend/src"
     schedule:
       interval: "weekly"
-    target-branch: "postgres-notifications"
+    groups:
+      frontend-npm:
+        patterns: ["*"]
 
   # Worker - docker and gomod
 
@@ -65,13 +70,17 @@ updates:
     directory: "/worker"
     schedule:
       interval: "weekly"
-    target-branch: "postgres-notifications"
+    groups:
+      worker-docker:
+        patterns: ["*"]
 
   - package-ecosystem: "gomod"
     directory: "/worker/src"
     schedule:
       interval: "weekly"
-    target-branch: "postgres-notifications"
+    groups:
+      worker-go:
+        patterns: ["*"]
 
   # Nginx - docker
 
@@ -79,4 +88,3 @@ updates:
     directory: "/infra/nginx"
     schedule:
       interval: "weekly"
-    target-branch: "postgres-notifications"
