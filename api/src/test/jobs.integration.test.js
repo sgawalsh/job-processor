@@ -42,10 +42,10 @@ describe('POST /jobs integration', () => {
       .send({ description: 'Integration job' });
 
     expect(res.statusCode).toBe(201);
-    expect(res.body).toHaveProperty('id');
+    expect(res.body).toHaveProperty('public_id');
     expect(res.body.description).toBe('Integration job');
 
-    const dbRes = await pool.query('SELECT * FROM jobs WHERE id = $1', [res.body.id]);
+    const dbRes = await pool.query('SELECT * FROM jobs WHERE public_id = $1', [res.body.public_id]);
     expect(dbRes.rowCount).toBe(1);
   });
 

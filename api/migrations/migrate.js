@@ -18,6 +18,7 @@ async function runMigrations(pool, { enableCron = false } = {}) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS jobs (
       id SERIAL PRIMARY KEY,
+      public_id UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
       description TEXT NOT NULL,
       status job_status NOT NULL DEFAULT 'PENDING',
       created_at TIMESTAMP DEFAULT NOW(),

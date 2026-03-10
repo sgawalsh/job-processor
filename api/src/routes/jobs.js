@@ -15,7 +15,7 @@ function jobsRoutes({ pool }) {
         try {
             await client.query('BEGIN');
             const result = await client.query(
-            'INSERT INTO jobs(description) VALUES($1) RETURNING id, description',
+            'INSERT INTO jobs(description) VALUES($1) RETURNING public_id, description',
             [description]
             );
 
@@ -31,16 +31,16 @@ function jobsRoutes({ pool }) {
         }
     });
 
-    router.get('/:id', async (req, res) => {
+    router.get('/:public_id', async (req, res) => {
         res.set('Cache-Control', 'no-store');
-        const { id } = req.params;
+        const { public_id } = req.params;
 
         try {
             const result = await pool.query(
                 `SELECT id, description, status, created_at, started_at, attempts, last_error
                 FROM jobs
-                WHERE id = $1`,
-                [id]
+                WHERE public_id = $1`,
+                [public_id]
             );
 
             if (result.rowCount === 0) {
