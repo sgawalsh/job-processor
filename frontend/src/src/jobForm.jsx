@@ -25,7 +25,7 @@ function JobForm() {
       const data = await res.json();
 
       // SUCCESS → redirect
-      navigate(`/jobs/${data.id}`);
+      navigate(`/jobs/${data.public_id}`);
     } catch (err) {
       // FAILURE → stay here
       setError(err.message);
