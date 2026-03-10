@@ -5,12 +5,14 @@ Write-Host "Bootstrapping Kubernetes Cluster..."
 ############################################
 # 1. Namespaces
 ############################################
+
 Write-Host "Creating namespaces..."
 kubectl apply -R -f .\namespaces\
 
 ############################################
 # 2. Install Monitoring (Helm)
 ############################################
+
 Write-Host "Installing kube-prometheus-stack..."
 
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts 2>$null
@@ -21,22 +23,20 @@ helm upgrade --install monitoring prometheus-community/kube-prometheus-stack `
   --create-namespace `
   -f .\monitoring\values.yaml
 
-############################################
-# 3. Wait for Monitoring Pods
-############################################
 Write-Host "Waiting for monitoring pods..."
 kubectl wait --for=condition=Ready pods --all -n monitoring --timeout=${timeout}s
 
 ############################################
-# 4. Deploy App
+# 3. Deploy App
 ############################################
+
 Write-Host "Deploying application..."
 kubectl apply -R -f .\app\
 
 kubectl wait --for=condition=Ready pods --all -n app --timeout=${timeout}s
 
 ############################################
-# 5. Install KEDA and deploy ScaledObject
+# 4. Install KEDA and deploy ScaledObject
 ############################################
 Write-Host "Installing KEDA..."
 
@@ -54,15 +54,17 @@ Write-Host "Deploying KEDA ScaledObject..."
 kubectl apply -R -f .\keda\
 
 ############################################
-# 6. Apply Monitoring Resources
+# 5. Apply Monitoring Resources
 ############################################
+
 Write-Host "Applying ServiceMonitors and dashboards..."
 kubectl apply -R -f .\monitoring\monitors\
 kubectl apply -R -f .\monitoring\dashboards\
 
 ############################################
-# 7. Install Ingress Controller
+# 6. Install Ingress Controller
 ############################################
+
 Write-Host "Installing ingress controller..."
 kubectl apply -f .\ingress\controller.yaml
 
@@ -104,11 +106,10 @@ if (-not $endpoints) {
 
 Write-Host "Admission webhook is ready."
 
-
-
 ############################################
-# 8. Apply Ingress Resource
+# 7. Apply Ingress Resource
 ############################################
+
 Write-Host "Applying ingress resources..."
 
 $interval = 5

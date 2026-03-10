@@ -276,26 +276,26 @@ The Kubernetes configuration is located in the infra/k8s/ directory and is desig
 
 A bootstrap script is provided to install and configure the cluster components in the correct order. The script performs the following steps:
 
-- **Create Namespaces** - Namespaces are created for application services and infrastructure components.
-- **Install Monitoring Stack** - The monitoring stack is deployed using the kube-prometheus-stack Helm chart, which includes:
+1. **Create Namespaces** - Namespaces are created for application services and infrastructure components.
+2. **Install Monitoring Stack** - The monitoring stack is deployed using the kube-prometheus-stack Helm chart, which includes:
     - Prometheus
     - Grafana
     - Alertmanager
     - Node exporters
     - Kubernetes metrics
-- **Deploy Application Services**: Application manifests are applied, including:
+3. **Deploy Application Services**: Application manifests are applied, including:
     - API deployment
     - worker deployment
     - PostgreSQL
     - Redis (Redis branch only)
 
-- **Install KEDA** - KEDA is installed via Helm and used to enable event-driven autoscaling of worker pods based on queue depth.
-- **Apply Monitoring Resources** - Custom monitoring resources are applied, including:
+4. **Install KEDA** - KEDA is installed via Helm and used to enable event-driven autoscaling of worker pods based on queue depth.
+5. **Apply Monitoring Resources** - Custom monitoring resources are applied, including:
     - Prometheus ServiceMonitor objects
     - Grafana dashboards for application metrics
 
-- **Install Ingress Controller** - An NGINX Ingress Controller is deployed to expose the API and frontend services.
-- **Apply Application Ingress Resources** - Ingress routes are configured for:
+6. **Install Ingress Controller** - An NGINX Ingress Controller is deployed to expose the API and frontend services.
+7. **Apply Application Ingress Resources** - Ingress routes are configured for:
     - API service
     - Frontend service
 
