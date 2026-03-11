@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/me/job-processor/worker/src/testutil"
+	"github.com/sgawalsh/job-processor/worker/src/testutil"
 	"github.com/stretchr/testify/require"
 )
 

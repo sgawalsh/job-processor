@@ -1,4 +1,4 @@
-module github.com/me/job-processor/worker/src
+module github.com/sgawalsh/job-processor/worker/src
 
 go 1.26
 
