@@ -29,6 +29,41 @@ async function runMigrations(pool, { enableCron = false } = {}) {
       last_error TEXT
     )
   `);
+  
+  // Create index on status for efficient querying of pending jobs for KEDA
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_jobs_status_pending
+    ON jobs(status)
+    WHERE status = 'PENDING';
+  `);
+
+  // Create trigger function for automatic update_at timestamp
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION set_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN
+      NEW.updated_at = NOW();
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql;;
+  `);
+
+  // Create trigger function for automatic update_at timestamp
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'jobs_set_updated_at'
+      ) THEN
+        CREATE TRIGGER jobs_set_updated_at
+        BEFORE UPDATE ON jobs
+        FOR EACH ROW
+        EXECUTE FUNCTION set_updated_at();
+      END IF;
+    END
+    $$;
+  `);
+  
   if (enableCron) {
     // Ensure pg_cron extension exists
     await pool.query(`CREATE EXTENSION IF NOT EXISTS pg_cron;`);
